@@ -1,0 +1,6 @@
+{
+  "name": "ESP32 Web Control Dashboard",
+  "description": "Static, secure GitHub Pages-compatible dashboard for controlling ESP32 dual LEDs (GPIO 13 & 25) with non-blocking blinking, digital waveform visualization, and real-time hardware telemetry.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

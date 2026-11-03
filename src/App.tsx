@@ -33,6 +33,7 @@ import {
 
 import { LedChannel, HardwareTelemetry, DeviceConfig, LogEntry } from './types';
 import { WIRING_DOC, SETUP_DOC, API_DOC, README_DOC, generateFirmwareCode } from './docsContent';
+import { DocRenderer } from './DocRenderer';
 
 // Default Configurations
 const DEFAULT_CONFIG: DeviceConfig = {
@@ -641,7 +642,18 @@ export default function App() {
         console.warn('Could not fetch static files dynamically:', e);
       }
 
-      // Add actual subfolder structure
+      // Add files directly at root of ZIP for immediate drag-and-drop into GitHub repo
+      if (htmlText) zip.file('index.html', htmlText);
+      if (cssText) zip.file('style.css', cssText);
+      if (jsText) zip.file('script.js', jsText);
+      zip.file('README.md', README_DOC);
+      zip.folder('firmware')?.file('esp32_controller.ino', generatedIno);
+      const rootDocs = zip.folder('docs');
+      rootDocs?.file('wiring.md', WIRING_DOC);
+      rootDocs?.file('setup.md', SETUP_DOC);
+      rootDocs?.file('api.md', API_DOC);
+
+      // Also include in ESP32-Web-Controller folder
       const rootFolder = zip.folder('ESP32-Web-Controller');
       if (rootFolder) {
         if (htmlText) rootFolder.file('index.html', htmlText);
@@ -721,7 +733,9 @@ export default function App() {
               className={`whitespace-nowrap transition-colors pb-1 border-b-2 ${
                 activeTab === 'dashboard'
                   ? 'text-cyan-500 border-cyan-500 font-semibold'
-                  : 'text-slate-400 border-transparent hover:text-slate-200'
+                  : isDark
+                  ? 'text-slate-400 border-transparent hover:text-slate-200'
+                  : 'text-slate-600 border-transparent hover:text-slate-900'
               }`}
             >
               Control Dashboard
@@ -731,7 +745,9 @@ export default function App() {
               className={`whitespace-nowrap transition-colors pb-1 border-b-2 ${
                 activeTab === 'wiring'
                   ? 'text-cyan-500 border-cyan-500 font-semibold'
-                  : 'text-slate-400 border-transparent hover:text-slate-200'
+                  : isDark
+                  ? 'text-slate-400 border-transparent hover:text-slate-200'
+                  : 'text-slate-600 border-transparent hover:text-slate-900'
               }`}
             >
               Hardware Wiring
@@ -741,7 +757,9 @@ export default function App() {
               className={`whitespace-nowrap transition-colors pb-1 border-b-2 ${
                 activeTab === 'firmware'
                   ? 'text-cyan-500 border-cyan-500 font-semibold'
-                  : 'text-slate-400 border-transparent hover:text-slate-200'
+                  : isDark
+                  ? 'text-slate-400 border-transparent hover:text-slate-200'
+                  : 'text-slate-600 border-transparent hover:text-slate-900'
               }`}
             >
               Firmware Generator
@@ -751,7 +769,9 @@ export default function App() {
               className={`whitespace-nowrap transition-colors pb-1 border-b-2 ${
                 activeTab === 'docs'
                   ? 'text-cyan-500 border-cyan-500 font-semibold'
-                  : 'text-slate-400 border-transparent hover:text-slate-200'
+                  : isDark
+                  ? 'text-slate-400 border-transparent hover:text-slate-200'
+                  : 'text-slate-600 border-transparent hover:text-slate-900'
               }`}
             >
               Documentation
@@ -915,9 +935,11 @@ export default function App() {
                   isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'
                 }`}
               >
-                <div className="flex items-center justify-between border-b pb-3.5 border-slate-800/60 dark:border-slate-800">
+                <div className={`flex items-center justify-between border-b pb-3.5 ${isDark ? 'border-slate-800' : 'border-slate-200'}`}>
                   <div className="flex items-center gap-2.5 sm:gap-3">
-                    <span className="px-2 py-0.5 text-xs font-mono font-bold rounded bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
+                    <span className={`px-2 py-0.5 text-xs font-mono font-bold rounded border ${
+                      isDark ? 'bg-cyan-500/10 text-cyan-400 border-cyan-500/20' : 'bg-cyan-50 text-cyan-700 border-cyan-200'
+                    }`}>
                       GPIO 13
                     </span>
                     <h2 className="text-base sm:text-lg font-bold">LED 1 (Signal)</h2>
@@ -925,17 +947,23 @@ export default function App() {
                   <div
                     className={`px-2.5 py-1 text-xs font-mono font-bold rounded flex items-center gap-1.5 transition-all ${
                       led1.currentState === 1
-                        ? 'bg-cyan-500/15 text-cyan-400 shadow-lg shadow-cyan-500/20 ring-1 ring-cyan-500/30'
-                        : 'bg-slate-800 text-slate-400'
+                        ? isDark
+                          ? 'bg-cyan-500/15 text-cyan-400 shadow-lg shadow-cyan-500/20 ring-1 ring-cyan-500/30'
+                          : 'bg-cyan-100 text-cyan-800 shadow-sm ring-1 ring-cyan-300'
+                        : isDark
+                        ? 'bg-slate-800 text-slate-400'
+                        : 'bg-slate-100 text-slate-600 border border-slate-200'
                     }`}
                   >
-                    <span className={`w-2 h-2 rounded-full ${led1.currentState === 1 ? 'bg-cyan-400' : 'bg-slate-500'}`} />
+                    <span className={`w-2 h-2 rounded-full ${led1.currentState === 1 ? 'bg-cyan-500' : 'bg-slate-400'}`} />
                     <span>{led1.currentState === 1 ? 'HIGH (3.3V)' : 'LOW (0V)'}</span>
                   </div>
                 </div>
 
                 {/* Segmented Mode Control (Touch Friendly) */}
-                <div className="flex items-center p-1 rounded-xl bg-slate-800/80 border border-slate-700/60 gap-1">
+                <div className={`flex items-center p-1 rounded-xl border gap-1 ${
+                  isDark ? 'bg-slate-800/80 border-slate-700/60' : 'bg-slate-100 border-slate-200'
+                }`}>
                   {(['OFF', 'ON', 'BLINK'] as const).map((m) => (
                     <button
                       key={m}
@@ -943,7 +971,9 @@ export default function App() {
                       className={`flex-1 py-2.5 sm:py-2 text-xs sm:text-sm font-semibold rounded-lg transition-all min-h-[42px] ${
                         led1.mode === m
                           ? 'bg-cyan-600 text-white shadow-sm'
-                          : 'text-slate-400 hover:text-slate-200'
+                          : isDark
+                          ? 'text-slate-400 hover:text-slate-200'
+                          : 'text-slate-600 hover:text-slate-900'
                       }`}
                     >
                       {m}
@@ -953,7 +983,7 @@ export default function App() {
 
                 {/* Slider: ON Duration */}
                 <div className="flex flex-col gap-1.5 sm:gap-2">
-                  <div className="flex items-center justify-between text-xs font-medium text-slate-400">
+                  <div className={`flex items-center justify-between text-xs font-medium ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
                     <label htmlFor="led1-on-slider">Pulse ON Duration</label>
                     <div className="flex items-center gap-1">
                       <input
@@ -984,7 +1014,7 @@ export default function App() {
 
                 {/* Slider: OFF Duration */}
                 <div className="flex flex-col gap-1.5 sm:gap-2">
-                  <div className="flex items-center justify-between text-xs font-medium text-slate-400">
+                  <div className={`flex items-center justify-between text-xs font-medium ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
                     <label htmlFor="led1-off-slider">Pulse OFF Duration</label>
                     <div className="flex items-center gap-1">
                       <input
@@ -1014,12 +1044,12 @@ export default function App() {
                 </div>
 
                 {/* Calculated Frequency and Duty Cycle */}
-                <div className={`grid grid-cols-2 gap-2.5 sm:gap-3 p-3 sm:p-3.5 rounded-xl border ${isDark ? 'bg-slate-800/50 border-slate-800' : 'bg-slate-100/70 border-slate-200'}`}>
+                <div className={`grid grid-cols-2 gap-2.5 sm:gap-3 p-3 sm:p-3.5 rounded-xl border ${isDark ? 'bg-slate-800/50 border-slate-800' : 'bg-slate-50 border-slate-200'}`}>
                   <div className="flex flex-col">
                     <span className="text-[10px] uppercase font-semibold text-slate-500">
                       Blinking Frequency
                     </span>
-                    <span className="text-sm sm:text-base font-mono font-bold tabular-nums text-cyan-400">
+                    <span className={`text-sm sm:text-base font-mono font-bold tabular-nums ${isDark ? 'text-cyan-400' : 'text-cyan-700'}`}>
                       {led1Freq} Hz
                     </span>
                   </div>
@@ -1027,7 +1057,7 @@ export default function App() {
                     <span className="text-[10px] uppercase font-semibold text-slate-500">
                       Duty Cycle
                     </span>
-                    <span className="text-sm sm:text-base font-mono font-bold tabular-nums text-cyan-400">
+                    <span className={`text-sm sm:text-base font-mono font-bold tabular-nums ${isDark ? 'text-cyan-400' : 'text-cyan-700'}`}>
                       {led1Duty} %
                     </span>
                   </div>
@@ -1038,25 +1068,33 @@ export default function App() {
                   <span className="text-slate-500 font-semibold">Presets:</span>
                   <button
                     onClick={() => handleSetLed(1, 'BLINK', 1000, 1000)}
-                    className="px-3 py-2 sm:py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-200 transition-all min-h-[38px] flex items-center"
+                    className={`px-3 py-2 sm:py-1.5 rounded-lg active:scale-95 transition-all min-h-[38px] flex items-center font-medium ${
+                      isDark ? 'bg-slate-800 hover:bg-slate-700 text-slate-200' : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200'
+                    }`}
                   >
                     Slow (1s)
                   </button>
                   <button
                     onClick={() => handleSetLed(1, 'BLINK', 500, 500)}
-                    className="px-3 py-2 sm:py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-200 transition-all min-h-[38px] flex items-center"
+                    className={`px-3 py-2 sm:py-1.5 rounded-lg active:scale-95 transition-all min-h-[38px] flex items-center font-medium ${
+                      isDark ? 'bg-slate-800 hover:bg-slate-700 text-slate-200' : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200'
+                    }`}
                   >
                     Normal (500ms)
                   </button>
                   <button
                     onClick={() => handleSetLed(1, 'BLINK', 100, 100)}
-                    className="px-3 py-2 sm:py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-200 transition-all min-h-[38px] flex items-center"
+                    className={`px-3 py-2 sm:py-1.5 rounded-lg active:scale-95 transition-all min-h-[38px] flex items-center font-medium ${
+                      isDark ? 'bg-slate-800 hover:bg-slate-700 text-slate-200' : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200'
+                    }`}
                   >
                     Fast (100ms)
                   </button>
                   <button
                     onClick={() => handleSetLed(1, 'BLINK', 50, 450)}
-                    className="px-3 py-2 sm:py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-200 transition-all min-h-[38px] flex items-center"
+                    className={`px-3 py-2 sm:py-1.5 rounded-lg active:scale-95 transition-all min-h-[38px] flex items-center font-medium ${
+                      isDark ? 'bg-slate-800 hover:bg-slate-700 text-slate-200' : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200'
+                    }`}
                   >
                     Strobe (50ms)
                   </button>
@@ -1070,9 +1108,11 @@ export default function App() {
                   isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'
                 }`}
               >
-                <div className="flex items-center justify-between border-b pb-3.5 border-slate-800/60 dark:border-slate-800">
+                <div className={`flex items-center justify-between border-b pb-3.5 ${isDark ? 'border-slate-800' : 'border-slate-200'}`}>
                   <div className="flex items-center gap-2.5 sm:gap-3">
-                    <span className="px-2 py-0.5 text-xs font-mono font-bold rounded bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                    <span className={`px-2 py-0.5 text-xs font-mono font-bold rounded border ${
+                      isDark ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' : 'bg-amber-50 text-amber-800 border-amber-200'
+                    }`}>
                       GPIO 25
                     </span>
                     <h2 className="text-base sm:text-lg font-bold">LED 2 (Indicator)</h2>
@@ -1080,17 +1120,23 @@ export default function App() {
                   <div
                     className={`px-2.5 py-1 text-xs font-mono font-bold rounded flex items-center gap-1.5 transition-all ${
                       led2.currentState === 1
-                        ? 'bg-amber-500/15 text-amber-400 shadow-lg shadow-amber-500/20 ring-1 ring-amber-500/30'
-                        : 'bg-slate-800 text-slate-400'
+                        ? isDark
+                          ? 'bg-amber-500/15 text-amber-400 shadow-lg shadow-amber-500/20 ring-1 ring-amber-500/30'
+                          : 'bg-amber-100 text-amber-800 shadow-sm ring-1 ring-amber-300'
+                        : isDark
+                        ? 'bg-slate-800 text-slate-400'
+                        : 'bg-slate-100 text-slate-600 border border-slate-200'
                     }`}
                   >
-                    <span className={`w-2 h-2 rounded-full ${led2.currentState === 1 ? 'bg-amber-400' : 'bg-slate-500'}`} />
+                    <span className={`w-2 h-2 rounded-full ${led2.currentState === 1 ? 'bg-amber-500' : 'bg-slate-400'}`} />
                     <span>{led2.currentState === 1 ? 'HIGH (3.3V)' : 'LOW (0V)'}</span>
                   </div>
                 </div>
 
                 {/* Segmented Mode Control */}
-                <div className="flex items-center p-1 rounded-xl bg-slate-800/80 border border-slate-700/60 gap-1">
+                <div className={`flex items-center p-1 rounded-xl border gap-1 ${
+                  isDark ? 'bg-slate-800/80 border-slate-700/60' : 'bg-slate-100 border-slate-200'
+                }`}>
                   {(['OFF', 'ON', 'BLINK'] as const).map((m) => (
                     <button
                       key={m}
@@ -1098,7 +1144,9 @@ export default function App() {
                       className={`flex-1 py-2.5 sm:py-2 text-xs sm:text-sm font-semibold rounded-lg transition-all min-h-[42px] ${
                         led2.mode === m
                           ? 'bg-amber-600 text-white shadow-sm'
-                          : 'text-slate-400 hover:text-slate-200'
+                          : isDark
+                          ? 'text-slate-400 hover:text-slate-200'
+                          : 'text-slate-600 hover:text-slate-900'
                       }`}
                     >
                       {m}
@@ -1108,7 +1156,7 @@ export default function App() {
 
                 {/* Slider: ON Duration */}
                 <div className="flex flex-col gap-1.5 sm:gap-2">
-                  <div className="flex items-center justify-between text-xs font-medium text-slate-400">
+                  <div className={`flex items-center justify-between text-xs font-medium ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
                     <label htmlFor="led2-on-slider">Pulse ON Duration</label>
                     <div className="flex items-center gap-1">
                       <input
@@ -1139,7 +1187,7 @@ export default function App() {
 
                 {/* Slider: OFF Duration */}
                 <div className="flex flex-col gap-1.5 sm:gap-2">
-                  <div className="flex items-center justify-between text-xs font-medium text-slate-400">
+                  <div className={`flex items-center justify-between text-xs font-medium ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
                     <label htmlFor="led2-off-slider">Pulse OFF Duration</label>
                     <div className="flex items-center gap-1">
                       <input
@@ -1169,12 +1217,12 @@ export default function App() {
                 </div>
 
                 {/* Calculated Frequency and Duty Cycle */}
-                <div className={`grid grid-cols-2 gap-2.5 sm:gap-3 p-3 sm:p-3.5 rounded-xl border ${isDark ? 'bg-slate-800/50 border-slate-800' : 'bg-slate-100/70 border-slate-200'}`}>
+                <div className={`grid grid-cols-2 gap-2.5 sm:gap-3 p-3 sm:p-3.5 rounded-xl border ${isDark ? 'bg-slate-800/50 border-slate-800' : 'bg-slate-50 border-slate-200'}`}>
                   <div className="flex flex-col">
                     <span className="text-[10px] uppercase font-semibold text-slate-500">
                       Blinking Frequency
                     </span>
-                    <span className="text-sm sm:text-base font-mono font-bold tabular-nums text-amber-400">
+                    <span className={`text-sm sm:text-base font-mono font-bold tabular-nums ${isDark ? 'text-amber-400' : 'text-amber-700'}`}>
                       {led2Freq} Hz
                     </span>
                   </div>
@@ -1182,7 +1230,7 @@ export default function App() {
                     <span className="text-[10px] uppercase font-semibold text-slate-500">
                       Duty Cycle
                     </span>
-                    <span className="text-sm sm:text-base font-mono font-bold tabular-nums text-amber-400">
+                    <span className={`text-sm sm:text-base font-mono font-bold tabular-nums ${isDark ? 'text-amber-400' : 'text-amber-700'}`}>
                       {led2Duty} %
                     </span>
                   </div>
@@ -1193,25 +1241,33 @@ export default function App() {
                   <span className="text-slate-500 font-semibold">Presets:</span>
                   <button
                     onClick={() => handleSetLed(2, 'BLINK', 1000, 1000)}
-                    className="px-3 py-2 sm:py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-200 transition-all min-h-[38px] flex items-center"
+                    className={`px-3 py-2 sm:py-1.5 rounded-lg active:scale-95 transition-all min-h-[38px] flex items-center font-medium ${
+                      isDark ? 'bg-slate-800 hover:bg-slate-700 text-slate-200' : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200'
+                    }`}
                   >
                     Slow (1s)
                   </button>
                   <button
                     onClick={() => handleSetLed(2, 'BLINK', 500, 500)}
-                    className="px-3 py-2 sm:py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-200 transition-all min-h-[38px] flex items-center"
+                    className={`px-3 py-2 sm:py-1.5 rounded-lg active:scale-95 transition-all min-h-[38px] flex items-center font-medium ${
+                      isDark ? 'bg-slate-800 hover:bg-slate-700 text-slate-200' : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200'
+                    }`}
                   >
                     Normal (500ms)
                   </button>
                   <button
                     onClick={() => handleSetLed(2, 'BLINK', 100, 100)}
-                    className="px-3 py-2 sm:py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-200 transition-all min-h-[38px] flex items-center"
+                    className={`px-3 py-2 sm:py-1.5 rounded-lg active:scale-95 transition-all min-h-[38px] flex items-center font-medium ${
+                      isDark ? 'bg-slate-800 hover:bg-slate-700 text-slate-200' : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200'
+                    }`}
                   >
                     Fast (100ms)
                   </button>
                   <button
                     onClick={() => handleSetLed(2, 'BLINK', 50, 450)}
-                    className="px-3 py-2 sm:py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-200 transition-all min-h-[38px] flex items-center"
+                    className={`px-3 py-2 sm:py-1.5 rounded-lg active:scale-95 transition-all min-h-[38px] flex items-center font-medium ${
+                      isDark ? 'bg-slate-800 hover:bg-slate-700 text-slate-200' : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200'
+                    }`}
                   >
                     Strobe (50ms)
                   </button>
@@ -1229,30 +1285,38 @@ export default function App() {
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div>
                   <h3 className="text-sm sm:text-base font-bold">Digital Logic Waveform (Oscilloscope)</h3>
-                  <p className="text-xs text-slate-400">
+                  <p className={`text-xs ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
                     Real-time digital square wave transitions (3.3V / 0V) across both GPIO channels
                   </p>
                 </div>
 
                 <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-xs font-semibold">
                   <div className="flex items-center gap-1.5">
-                    <span className="w-3.5 h-1 bg-cyan-400 rounded-sm" />
+                    <span className="w-3.5 h-1 bg-cyan-500 rounded-sm" />
                     <span>GPIO 13</span>
                   </div>
                   <div className="flex items-center gap-1.5">
-                    <span className="w-3.5 h-1 bg-amber-400 rounded-sm" />
+                    <span className="w-3.5 h-1 bg-amber-500 rounded-sm" />
                     <span>GPIO 25</span>
                   </div>
                   <button
                     onClick={() => setWaveformPaused(!waveformPaused)}
-                    className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-200 text-xs flex items-center gap-1 min-h-[36px]"
+                    className={`px-3 py-1.5 rounded-lg active:scale-95 text-xs flex items-center gap-1 min-h-[36px] transition-all ${
+                      isDark
+                        ? 'bg-slate-800 hover:bg-slate-700 text-slate-200'
+                        : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200'
+                    }`}
                   >
                     {waveformPaused ? <Play className="w-3.5 h-3.5" /> : <Pause className="w-3.5 h-3.5" />}
                     <span>{waveformPaused ? 'Resume' : 'Pause'}</span>
                   </button>
                   <button
                     onClick={() => (waveHistoryRef.current = [])}
-                    className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-200 text-xs flex items-center gap-1 min-h-[36px]"
+                    className={`px-3 py-1.5 rounded-lg active:scale-95 text-xs flex items-center gap-1 min-h-[36px] transition-all ${
+                      isDark
+                        ? 'bg-slate-800 hover:bg-slate-700 text-slate-200'
+                        : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200'
+                    }`}
                   >
                     <RotateCcw className="w-3.5 h-3.5" />
                     <span>Clear</span>
@@ -1260,7 +1324,9 @@ export default function App() {
                 </div>
               </div>
 
-              <div className="w-full h-40 sm:h-48 md:h-52 rounded-xl border border-slate-800 overflow-hidden relative">
+              <div className={`w-full h-40 sm:h-48 md:h-52 rounded-xl border overflow-hidden relative ${
+                isDark ? 'border-slate-800' : 'border-slate-200'
+              }`}>
                 <canvas ref={canvasRef} className="w-full h-full block" />
               </div>
             </section>
@@ -1279,7 +1345,11 @@ export default function App() {
                 </div>
                 <button
                   onClick={() => setLogs([])}
-                  className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs text-slate-300 min-h-[36px]"
+                  className={`px-3 py-1.5 rounded-lg text-xs min-h-[36px] transition-all ${
+                    isDark
+                      ? 'bg-slate-800 hover:bg-slate-700 text-slate-300'
+                      : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200'
+                  }`}
                 >
                   Clear Console
                 </button>
@@ -1290,21 +1360,21 @@ export default function App() {
                 className="h-36 overflow-y-auto overflow-x-auto font-mono text-[11px] sm:text-xs p-3 rounded-lg bg-slate-950 border border-slate-800 flex flex-col gap-1.5"
               >
                 {logs.length === 0 ? (
-                  <span className="text-slate-600">Console ready. Event packets will stream here in real-time.</span>
+                  <span className="text-slate-500">Console ready. Event packets will stream here in real-time.</span>
                 ) : (
                   logs.map((log) => {
                     let color = 'text-slate-400';
-                    if (log.type === 'tx') color = 'text-sky-400';
-                    if (log.type === 'rx') color = 'text-emerald-400';
-                    if (log.type === 'warn') color = 'text-amber-400';
+                    if (log.type === 'tx') color = 'text-sky-400 font-semibold';
+                    if (log.type === 'rx') color = 'text-emerald-400 font-semibold';
+                    if (log.type === 'warn') color = 'text-amber-400 font-semibold';
                     if (log.type === 'error' || log.type === 'security') color = 'text-rose-400 font-bold';
                     if (log.type === 'info') color = 'text-indigo-300';
 
                     return (
                       <div key={log.id} className="tabular-nums leading-relaxed">
-                        <span className="text-slate-600">[{log.timestamp}]</span>{' '}
+                        <span className="text-slate-500">[{log.timestamp}]</span>{' '}
                         <span className={color}>[{log.type.toUpperCase()}]</span>{' '}
-                        <span className="text-slate-300">{log.text}</span>
+                        <span className="text-slate-200">{log.text}</span>
                       </div>
                     );
                   })
@@ -1406,17 +1476,23 @@ export default function App() {
 
               {/* Component Specifications Table */}
               <div className="mt-4 sm:mt-6 grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4 text-xs">
-                <div className="p-3.5 sm:p-4 rounded-xl bg-slate-800/40 border border-slate-700/60">
-                  <h4 className="font-bold text-sm text-cyan-400 mb-1">LED 1 (GPIO 13)</h4>
-                  <p className="text-slate-300">Signal indicator. Connects to GPIO 13 via a 220Ω resistor. Safe current: ~2.3mA.</p>
+                <div className={`p-4 rounded-xl border ${
+                  isDark ? 'bg-slate-800/40 border-slate-700/60' : 'bg-slate-50 border-slate-200'
+                }`}>
+                  <h4 className={`font-bold text-sm mb-1 ${isDark ? 'text-cyan-400' : 'text-cyan-700'}`}>LED 1 (GPIO 13)</h4>
+                  <p className={isDark ? 'text-slate-300' : 'text-slate-600'}>Signal indicator. Connects to GPIO 13 via a 220Ω resistor. Safe current: ~2.3mA.</p>
                 </div>
-                <div className="p-3.5 sm:p-4 rounded-xl bg-slate-800/40 border border-slate-700/60">
-                  <h4 className="font-bold text-sm text-amber-400 mb-1">LED 2 (GPIO 25)</h4>
-                  <p className="text-slate-300">Status indicator. Connects to GPIO 25 via a 220Ω resistor. Safe current: ~6.0mA.</p>
+                <div className={`p-4 rounded-xl border ${
+                  isDark ? 'bg-slate-800/40 border-slate-700/60' : 'bg-slate-50 border-slate-200'
+                }`}>
+                  <h4 className={`font-bold text-sm mb-1 ${isDark ? 'text-amber-400' : 'text-amber-700'}`}>LED 2 (GPIO 25)</h4>
+                  <p className={isDark ? 'text-slate-300' : 'text-slate-600'}>Status indicator. Connects to GPIO 25 via a 220Ω resistor. Safe current: ~6.0mA.</p>
                 </div>
-                <div className="p-3.5 sm:p-4 rounded-xl bg-slate-800/40 border border-slate-700/60">
-                  <h4 className="font-bold text-sm text-purple-400 mb-1">Purple Expansion Board</h4>
-                  <p className="text-slate-300">Set the voltage selection jumper to 3.3V. LED cathodes return to the common GND rail.</p>
+                <div className={`p-4 rounded-xl border ${
+                  isDark ? 'bg-slate-800/40 border-slate-700/60' : 'bg-slate-50 border-slate-200'
+                }`}>
+                  <h4 className={`font-bold text-sm mb-1 ${isDark ? 'text-purple-400' : 'text-purple-700'}`}>Purple Expansion Board</h4>
+                  <p className={isDark ? 'text-slate-300' : 'text-slate-600'}>Set the voltage selection jumper to 3.3V. LED cathodes return to the common GND rail.</p>
                 </div>
               </div>
             </div>
@@ -1432,8 +1508,8 @@ export default function App() {
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
                 <div>
                   <h2 className="text-lg sm:text-xl font-bold">Interactive ESP32 Firmware Generator</h2>
-                  <p className="text-xs sm:text-sm text-slate-400">
-                    Customize your Wi-Fi credentials and auth token, then copy or download <code className="text-cyan-400">esp32_controller.ino</code>.
+                  <p className={`text-xs sm:text-sm ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
+                    Customize your Wi-Fi credentials and auth token, then copy or download <code className={`font-mono ${isDark ? 'text-cyan-400' : 'text-cyan-700 font-semibold'}`}>esp32_controller.ino</code>.
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
@@ -1460,7 +1536,11 @@ export default function App() {
                       document.body.removeChild(a);
                       URL.revokeObjectURL(url);
                     }}
-                    className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-200 border border-slate-700 transition-all min-h-[38px]"
+                    className={`flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg active:scale-95 border transition-all min-h-[38px] ${
+                      isDark
+                        ? 'bg-slate-800 hover:bg-slate-700 text-slate-200 border-slate-700'
+                        : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-300'
+                    }`}
                   >
                     <Download className="w-3.5 h-3.5" />
                     <span>Download .ino</span>
@@ -1469,48 +1549,58 @@ export default function App() {
               </div>
 
               {/* Customizer Inputs */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 p-3.5 sm:p-4 rounded-xl bg-slate-950 border border-slate-800 mb-4 sm:mb-6">
+              <div className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 p-3.5 sm:p-4 rounded-xl border mb-4 sm:mb-6 ${
+                isDark ? 'bg-slate-950 border-slate-800' : 'bg-slate-50 border-slate-200'
+              }`}>
                 <div className="flex flex-col gap-1">
-                  <label className="text-xs font-semibold text-slate-400">Wi-Fi SSID</label>
+                  <label className={`text-xs font-semibold ${isDark ? 'text-slate-400' : 'text-slate-700'}`}>Wi-Fi SSID</label>
                   <input
                     type="text"
                     value={fwWifiSsid}
                     onChange={(e) => setFwWifiSsid(e.target.value)}
-                    className="px-3 py-2 text-xs font-mono rounded-lg bg-slate-900 border border-slate-700 text-slate-100 focus:outline-none focus:border-cyan-500 min-h-[40px]"
+                    className={`px-3 py-2 text-xs font-mono rounded-lg border focus:outline-none focus:border-cyan-500 min-h-[40px] ${
+                      isDark ? 'bg-slate-900 border-slate-700 text-slate-100' : 'bg-white border-slate-300 text-slate-900'
+                    }`}
                   />
                 </div>
                 <div className="flex flex-col gap-1">
-                  <label className="text-xs font-semibold text-slate-400">Wi-Fi Password</label>
+                  <label className={`text-xs font-semibold ${isDark ? 'text-slate-400' : 'text-slate-700'}`}>Wi-Fi Password</label>
                   <input
                     type="password"
                     value={fwWifiPass}
                     onChange={(e) => setFwWifiPass(e.target.value)}
-                    className="px-3 py-2 text-xs font-mono rounded-lg bg-slate-900 border border-slate-700 text-slate-100 focus:outline-none focus:border-cyan-500 min-h-[40px]"
+                    className={`px-3 py-2 text-xs font-mono rounded-lg border focus:outline-none focus:border-cyan-500 min-h-[40px] ${
+                      isDark ? 'bg-slate-900 border-slate-700 text-slate-100' : 'bg-white border-slate-300 text-slate-900'
+                    }`}
                   />
                 </div>
                 <div className="flex flex-col gap-1">
-                  <label className="text-xs font-semibold text-slate-400">Device ID</label>
+                  <label className={`text-xs font-semibold ${isDark ? 'text-slate-400' : 'text-slate-700'}`}>Device ID</label>
                   <input
                     type="text"
                     value={config.deviceId}
                     onChange={(e) => setConfig({ ...config, deviceId: e.target.value })}
-                    className="px-3 py-2 text-xs font-mono rounded-lg bg-slate-900 border border-slate-700 text-slate-100 focus:outline-none focus:border-cyan-500 min-h-[40px]"
+                    className={`px-3 py-2 text-xs font-mono rounded-lg border focus:outline-none focus:border-cyan-500 min-h-[40px] ${
+                      isDark ? 'bg-slate-900 border-slate-700 text-slate-100' : 'bg-white border-slate-300 text-slate-900'
+                    }`}
                   />
                 </div>
                 <div className="flex flex-col gap-1">
-                  <label className="text-xs font-semibold text-slate-400">Auth Token</label>
+                  <label className={`text-xs font-semibold ${isDark ? 'text-slate-400' : 'text-slate-700'}`}>Auth Token</label>
                   <input
                     type="text"
                     value={config.authToken}
                     onChange={(e) => setConfig({ ...config, authToken: e.target.value })}
-                    className="px-3 py-2 text-xs font-mono rounded-lg bg-slate-900 border border-slate-700 text-slate-100 focus:outline-none focus:border-cyan-500 min-h-[40px]"
+                    className={`px-3 py-2 text-xs font-mono rounded-lg border focus:outline-none focus:border-cyan-500 min-h-[40px] ${
+                      isDark ? 'bg-slate-900 border-slate-700 text-slate-100' : 'bg-white border-slate-300 text-slate-900'
+                    }`}
                   />
                 </div>
               </div>
 
               {/* Code Viewer */}
               <div className="relative">
-                <pre className="max-h-[450px] overflow-y-auto overflow-x-auto p-3.5 sm:p-4 rounded-xl bg-slate-950 border border-slate-800 font-mono text-[11px] sm:text-xs text-slate-300 leading-relaxed">
+                <pre className="max-h-[450px] overflow-y-auto overflow-x-auto p-3.5 sm:p-4 rounded-xl bg-slate-950 border border-slate-800 font-mono text-[11px] sm:text-xs text-slate-200 leading-relaxed">
                   <code>{liveFirmwareCode}</code>
                 </pre>
               </div>
@@ -1523,8 +1613,10 @@ export default function App() {
         ===================================================================== */}
         {activeTab === 'docs' && (
           <div className="flex flex-col gap-4 sm:gap-6">
-            <div className={`p-4 sm:p-6 rounded-2xl border ${isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
-              <div className="flex items-center gap-2 border-b pb-3 border-slate-800 mb-4 sm:mb-6 overflow-x-auto">
+            <div className={`p-4 sm:p-6 rounded-2xl border ${isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200 shadow-sm'}`}>
+              <div className={`flex items-center gap-2 border-b pb-3.5 mb-4 sm:mb-6 overflow-x-auto ${
+                isDark ? 'border-slate-800' : 'border-slate-200'
+              }`}>
                 {(['setup', 'wiring', 'api', 'readme'] as const).map((sub) => (
                   <button
                     key={sub}
@@ -1532,7 +1624,9 @@ export default function App() {
                     className={`whitespace-nowrap px-3.5 py-2 text-xs font-semibold rounded-lg transition-all min-h-[38px] capitalize ${
                       activeDocSubtab === sub
                         ? 'bg-cyan-600 text-white shadow-sm'
-                        : 'bg-slate-800 text-slate-400 hover:text-slate-200'
+                        : isDark
+                        ? 'bg-slate-800 text-slate-400 hover:text-slate-200'
+                        : 'bg-slate-100 text-slate-600 hover:text-slate-900 border border-slate-200'
                     }`}
                   >
                     {sub === 'api' ? 'API & Protocol' : sub === 'readme' ? 'README.md' : sub}
@@ -1540,11 +1634,11 @@ export default function App() {
                 ))}
               </div>
 
-              <div className="prose prose-invert max-w-none text-slate-300 text-xs sm:text-sm leading-relaxed whitespace-pre-wrap font-sans break-words overflow-x-auto">
-                {activeDocSubtab === 'setup' && SETUP_DOC}
-                {activeDocSubtab === 'wiring' && WIRING_DOC}
-                {activeDocSubtab === 'api' && API_DOC}
-                {activeDocSubtab === 'readme' && README_DOC}
+              <div className="overflow-x-auto">
+                {activeDocSubtab === 'setup' && <DocRenderer content={SETUP_DOC} isDark={isDark} />}
+                {activeDocSubtab === 'wiring' && <DocRenderer content={WIRING_DOC} isDark={isDark} />}
+                {activeDocSubtab === 'api' && <DocRenderer content={API_DOC} isDark={isDark} />}
+                {activeDocSubtab === 'readme' && <DocRenderer content={README_DOC} isDark={isDark} />}
               </div>
             </div>
           </div>
@@ -1559,25 +1653,27 @@ export default function App() {
           <div className={`max-w-md w-full p-6 rounded-2xl border shadow-xl flex flex-col gap-4 ${
             isDark ? 'bg-slate-900 border-slate-800 text-slate-100' : 'bg-white border-slate-200 text-slate-900'
           }`}>
-            <div className="flex items-center justify-between border-b pb-3 border-slate-800">
+            <div className={`flex items-center justify-between border-b pb-3 ${isDark ? 'border-slate-800' : 'border-slate-200'}`}>
               <h3 className="text-base font-bold">Device Pairing & Security Settings</h3>
               <button
                 onClick={() => setShowPairingModal(false)}
-                className="text-slate-400 hover:text-slate-200 p-1"
+                className={`p-1 transition-colors ${isDark ? 'text-slate-400 hover:text-slate-200' : 'text-slate-500 hover:text-slate-800'}`}
               >
                 ✕
               </button>
             </div>
 
-            <div className="p-3.5 rounded-xl bg-cyan-500/10 border border-cyan-500/20 text-xs text-slate-300 flex gap-2.5">
-              <Key className="w-4 h-4 text-cyan-400 shrink-0 mt-0.5" />
+            <div className={`p-3.5 rounded-xl border text-xs flex gap-2.5 ${
+              isDark ? 'bg-cyan-500/10 border-cyan-500/20 text-slate-300' : 'bg-cyan-50 border-cyan-200 text-cyan-900'
+            }`}>
+              <Key className={`w-4 h-4 shrink-0 mt-0.5 ${isDark ? 'text-cyan-400' : 'text-cyan-700'}`} />
               <span>
-                <strong>Zero GitHub Secrets:</strong> Credentials are saved strictly in your browser's local storage and never committed to public repositories.
+                <strong className={isDark ? 'text-slate-100' : 'text-cyan-950'}>Zero GitHub Secrets:</strong> Credentials are saved strictly in your browser's local storage and never committed to public repositories.
               </span>
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-semibold text-slate-400">Target Device ID</label>
+              <label className={`text-xs font-semibold ${isDark ? 'text-slate-400' : 'text-slate-700'}`}>Target Device ID</label>
               <input
                 type="text"
                 value={config.deviceId}
@@ -1590,7 +1686,7 @@ export default function App() {
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-semibold text-slate-400">Secret Auth Token / Passkey</label>
+              <label className={`text-xs font-semibold ${isDark ? 'text-slate-400' : 'text-slate-700'}`}>Secret Auth Token / Passkey</label>
               <div className="flex gap-2">
                 <input
                   type="text"
@@ -1606,7 +1702,11 @@ export default function App() {
                     const rand = 'tok_' + Math.random().toString(36).substring(2, 10);
                     setConfig({ ...config, authToken: rand });
                   }}
-                  className="px-3 py-2 text-xs font-semibold rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300"
+                  className={`px-3 py-2 text-xs font-semibold rounded-lg border transition-all ${
+                    isDark
+                      ? 'bg-slate-800 hover:bg-slate-700 border-slate-700 text-slate-300'
+                      : 'bg-slate-100 hover:bg-slate-200 border-slate-300 text-slate-700'
+                  }`}
                 >
                   Generate
                 </button>
@@ -1615,7 +1715,7 @@ export default function App() {
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-semibold text-slate-400">Secure MQTT Broker (WSS URL)</label>
+              <label className={`text-xs font-semibold ${isDark ? 'text-slate-400' : 'text-slate-700'}`}>Secure MQTT Broker (WSS URL)</label>
               <select
                 value={config.brokerWss}
                 onChange={(e) => setConfig({ ...config, brokerWss: e.target.value })}
@@ -1628,16 +1728,20 @@ export default function App() {
               </select>
             </div>
 
-            <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-800">
+            <div className={`flex items-center justify-end gap-2 pt-2 border-t ${isDark ? 'border-slate-800' : 'border-slate-200'}`}>
               <button
                 onClick={() => setShowPairingModal(false)}
-                className="px-4 py-2 text-xs font-semibold rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300"
+                className={`px-4 py-2 text-xs font-semibold rounded-lg transition-all ${
+                  isDark
+                    ? 'bg-slate-800 hover:bg-slate-700 text-slate-300'
+                    : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300'
+                }`}
               >
                 Cancel
               </button>
               <button
                 onClick={() => handleSaveConfig(config)}
-                className="px-4 py-2 text-xs font-semibold rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white font-semibold shadow-sm"
+                className="px-4 py-2 text-xs font-semibold rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white font-semibold shadow-sm transition-all"
               >
                 Save & Connect
               </button>
@@ -1647,14 +1751,16 @@ export default function App() {
       )}
 
       {/* Footer */}
-      <footer className={`border-t py-6 px-4 sm:px-6 text-xs text-slate-500 mb-16 md:mb-0 ${isDark ? 'bg-slate-900/50 border-slate-800' : 'bg-slate-100 border-slate-200'}`}>
+      <footer className={`border-t py-6 px-4 sm:px-6 text-xs mb-16 md:mb-0 ${
+        isDark ? 'bg-slate-900/50 border-slate-800 text-slate-500' : 'bg-slate-100 border-slate-200 text-slate-600'
+      }`}>
         <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-2">
             <span>ESP32 Web Controller</span>
             <span>·</span>
             <span>GitHub Pages Ready</span>
             <span>·</span>
-            <span className="font-mono text-cyan-500">{config.deviceId}</span>
+            <span className={`font-mono ${isDark ? 'text-cyan-400' : 'text-cyan-700'}`}>{config.deviceId}</span>
           </div>
           <div>
             <span>WSS MQTT Secure Relay & Web Serial Dual-Mode</span>
@@ -1683,15 +1789,15 @@ export default function App() {
             }}
             className={`py-1.5 px-1 rounded-xl flex flex-col items-center justify-center gap-1 transition-all active:scale-95 ${
               activeTab === 'dashboard'
-                ? 'text-cyan-400 font-bold'
-                : 'text-slate-400 hover:text-slate-200'
+                ? isDark ? 'text-cyan-400 font-bold' : 'text-cyan-700 font-bold'
+                : isDark ? 'text-slate-400 hover:text-slate-200' : 'text-slate-600 hover:text-slate-900'
             }`}
           >
             <div
               className={`p-1 rounded-lg transition-all ${
                 activeTab === 'dashboard'
-                  ? 'bg-cyan-500/20 text-cyan-400 shadow-sm shadow-cyan-500/20'
-                  : 'text-slate-400'
+                  ? isDark ? 'bg-cyan-500/20 text-cyan-400 shadow-sm shadow-cyan-500/20' : 'bg-cyan-100 text-cyan-700'
+                  : isDark ? 'text-slate-400' : 'text-slate-500'
               }`}
             >
               <Sliders className="w-5 h-5" />
@@ -1707,15 +1813,15 @@ export default function App() {
             }}
             className={`py-1.5 px-1 rounded-xl flex flex-col items-center justify-center gap-1 transition-all active:scale-95 ${
               activeTab === 'wiring'
-                ? 'text-cyan-400 font-bold'
-                : 'text-slate-400 hover:text-slate-200'
+                ? isDark ? 'text-cyan-400 font-bold' : 'text-cyan-700 font-bold'
+                : isDark ? 'text-slate-400 hover:text-slate-200' : 'text-slate-600 hover:text-slate-900'
             }`}
           >
             <div
               className={`p-1 rounded-lg transition-all ${
                 activeTab === 'wiring'
-                  ? 'bg-cyan-500/20 text-cyan-400 shadow-sm shadow-cyan-500/20'
-                  : 'text-slate-400'
+                  ? isDark ? 'bg-cyan-500/20 text-cyan-400 shadow-sm shadow-cyan-500/20' : 'bg-cyan-100 text-cyan-700'
+                  : isDark ? 'text-slate-400' : 'text-slate-500'
               }`}
             >
               <Radio className="w-5 h-5" />
@@ -1731,15 +1837,15 @@ export default function App() {
             }}
             className={`py-1.5 px-1 rounded-xl flex flex-col items-center justify-center gap-1 transition-all active:scale-95 ${
               activeTab === 'firmware'
-                ? 'text-cyan-400 font-bold'
-                : 'text-slate-400 hover:text-slate-200'
+                ? isDark ? 'text-cyan-400 font-bold' : 'text-cyan-700 font-bold'
+                : isDark ? 'text-slate-400 hover:text-slate-200' : 'text-slate-600 hover:text-slate-900'
             }`}
           >
             <div
               className={`p-1 rounded-lg transition-all ${
                 activeTab === 'firmware'
-                  ? 'bg-cyan-500/20 text-cyan-400 shadow-sm shadow-cyan-500/20'
-                  : 'text-slate-400'
+                  ? isDark ? 'bg-cyan-500/20 text-cyan-400 shadow-sm shadow-cyan-500/20' : 'bg-cyan-100 text-cyan-700'
+                  : isDark ? 'text-slate-400' : 'text-slate-500'
               }`}
             >
               <Cpu className="w-5 h-5" />
@@ -1755,15 +1861,15 @@ export default function App() {
             }}
             className={`py-1.5 px-1 rounded-xl flex flex-col items-center justify-center gap-1 transition-all active:scale-95 ${
               activeTab === 'docs'
-                ? 'text-cyan-400 font-bold'
-                : 'text-slate-400 hover:text-slate-200'
+                ? isDark ? 'text-cyan-400 font-bold' : 'text-cyan-700 font-bold'
+                : isDark ? 'text-slate-400 hover:text-slate-200' : 'text-slate-600 hover:text-slate-900'
             }`}
           >
             <div
               className={`p-1 rounded-lg transition-all ${
                 activeTab === 'docs'
-                  ? 'bg-cyan-500/20 text-cyan-400 shadow-sm shadow-cyan-500/20'
-                  : 'text-slate-400'
+                  ? isDark ? 'bg-cyan-500/20 text-cyan-400 shadow-sm shadow-cyan-500/20' : 'bg-cyan-100 text-cyan-700'
+                  : isDark ? 'text-slate-400' : 'text-slate-500'
               }`}
             >
               <BookOpen className="w-5 h-5" />

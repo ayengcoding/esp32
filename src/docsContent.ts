@@ -102,6 +102,18 @@ ESP32-Web-Controller/
 5. Within 1 to 2 minutes, GitHub Pages will display your public URL:
    \`https://USERNAME.github.io/ESP32-Web-Controller/\`
 
+### Step 1.4: Troubleshooting — Blank White Screen with "GET /src/main.tsx 404"
+If your GitHub Pages page is blank with error \`GET .../src/main.tsx 404 (Not Found)\`:
+- **Why this happens:** Browsers cannot run uncompiled React/TypeScript (\`.tsx\`) files on a static host like GitHub Pages. You accidentally uploaded the Vite developer template root file (\`src/main.tsx\`) instead of the static standalone files!
+- **Instant Fix (Option A - No Build Required):**
+  1. Click **Download ZIP** in the dashboard header (or open the \`ESP32-Web-Controller/\` folder in your project).
+  2. Upload \`index.html\`, \`style.css\`, and \`script.js\` directly into the root of your GitHub repository.
+  3. These files use pure HTML5, CSS3, and JavaScript with relative paths (\`./style.css\`, \`./script.js\`) and run instantly on GitHub Pages without any build tools.
+- **Automated Fix (Option B - GitHub Actions Build):**
+  1. If you want to keep the full React project in your GitHub repository, enable **GitHub Actions**.
+  2. Go to **Settings > Pages > Build and deployment > Source** and select **GitHub Actions**.
+  3. Our project includes \`.github/workflows/deploy.yml\` which automatically builds the React code with \`npm run build\` and publishes the production \`dist/\` files.
+
 ---
 
 ## Part 2: Arduino IDE & Firmware Installation

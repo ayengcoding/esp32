@@ -811,65 +811,12 @@ export default function App() {
             </button>
           </div>
         </div>
-
-        {/* Mobile Sub-Navigation Bar (Sticky & Touch-Friendly) */}
-        <nav
-          aria-label="Mobile Navigation"
-          className={`md:hidden border-t px-2 py-1.5 flex items-center justify-around gap-1 ${
-            isDark ? 'bg-slate-900/95 border-slate-800' : 'bg-slate-100/95 border-slate-200'
-          }`}
-        >
-          <button
-            onClick={() => setActiveTab('dashboard')}
-            className={`flex-1 py-2 px-1 text-xs font-semibold rounded-lg flex flex-col items-center justify-center gap-1 transition-all min-h-[44px] ${
-              activeTab === 'dashboard'
-                ? 'bg-cyan-500/15 text-cyan-400 font-bold'
-                : 'text-slate-400 hover:text-slate-200'
-            }`}
-          >
-            <Sliders className="w-4 h-4" />
-            <span>Control</span>
-          </button>
-          <button
-            onClick={() => setActiveTab('wiring')}
-            className={`flex-1 py-2 px-1 text-xs font-semibold rounded-lg flex flex-col items-center justify-center gap-1 transition-all min-h-[44px] ${
-              activeTab === 'wiring'
-                ? 'bg-cyan-500/15 text-cyan-400 font-bold'
-                : 'text-slate-400 hover:text-slate-200'
-            }`}
-          >
-            <Radio className="w-4 h-4" />
-            <span>Wiring</span>
-          </button>
-          <button
-            onClick={() => setActiveTab('firmware')}
-            className={`flex-1 py-2 px-1 text-xs font-semibold rounded-lg flex flex-col items-center justify-center gap-1 transition-all min-h-[44px] ${
-              activeTab === 'firmware'
-                ? 'bg-cyan-500/15 text-cyan-400 font-bold'
-                : 'text-slate-400 hover:text-slate-200'
-            }`}
-          >
-            <Cpu className="w-4 h-4" />
-            <span>Firmware</span>
-          </button>
-          <button
-            onClick={() => setActiveTab('docs')}
-            className={`flex-1 py-2 px-1 text-xs font-semibold rounded-lg flex flex-col items-center justify-center gap-1 transition-all min-h-[44px] ${
-              activeTab === 'docs'
-                ? 'bg-cyan-500/15 text-cyan-400 font-bold'
-                : 'text-slate-400 hover:text-slate-200'
-            }`}
-          >
-            <BookOpen className="w-4 h-4" />
-            <span>Docs</span>
-          </button>
-        </nav>
       </header>
 
       {/* =========================================================================
-          MAIN VIEWPORT
+          MAIN VIEWPORT (with bottom padding on mobile for fixed bottom nav)
       ========================================================================= */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-6 flex flex-col gap-6">
+      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-4 sm:py-6 pb-28 md:pb-8 flex flex-col gap-6">
         {/* =====================================================================
             TAB 1: CONTROL DASHBOARD
         ===================================================================== */}
@@ -1700,12 +1647,12 @@ export default function App() {
       )}
 
       {/* Footer */}
-      <footer className={`border-t py-6 px-4 sm:px-6 text-xs text-slate-500 ${isDark ? 'bg-slate-900/50 border-slate-800' : 'bg-slate-100 border-slate-200'}`}>
+      <footer className={`border-t py-6 px-4 sm:px-6 text-xs text-slate-500 mb-16 md:mb-0 ${isDark ? 'bg-slate-900/50 border-slate-800' : 'bg-slate-100 border-slate-200'}`}>
         <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-2">
             <span>ESP32 Web Controller</span>
             <span>·</span>
-            <span>GitHub Pages Compatible</span>
+            <span>GitHub Pages Ready</span>
             <span>·</span>
             <span className="font-mono text-cyan-500">{config.deviceId}</span>
           </div>
@@ -1714,6 +1661,117 @@ export default function App() {
           </div>
         </div>
       </footer>
+
+      {/* =========================================================================
+          FIXED MOBILE BOTTOM NAVIGATION DOCK (iOS / Android)
+      ========================================================================= */}
+      <nav
+        aria-label="Mobile Bottom Navigation"
+        className={`md:hidden fixed bottom-0 left-0 right-0 z-50 border-t backdrop-blur-xl px-2 py-1 transition-colors duration-200 ${
+          isDark
+            ? 'bg-slate-950/95 border-slate-800/90 shadow-[0_-4px_25px_rgba(0,0,0,0.6)]'
+            : 'bg-white/95 border-slate-200/90 shadow-[0_-4px_25px_rgba(0,0,0,0.08)]'
+        }`}
+        style={{ paddingBottom: 'max(0.35rem, env(safe-area-inset-bottom, 8px))' }}
+      >
+        <div className="max-w-md mx-auto grid grid-cols-4 gap-1">
+          {/* Dashboard Tab */}
+          <button
+            onClick={() => {
+              setActiveTab('dashboard');
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
+            className={`py-1.5 px-1 rounded-xl flex flex-col items-center justify-center gap-1 transition-all active:scale-95 ${
+              activeTab === 'dashboard'
+                ? 'text-cyan-400 font-bold'
+                : 'text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            <div
+              className={`p-1 rounded-lg transition-all ${
+                activeTab === 'dashboard'
+                  ? 'bg-cyan-500/20 text-cyan-400 shadow-sm shadow-cyan-500/20'
+                  : 'text-slate-400'
+              }`}
+            >
+              <Sliders className="w-5 h-5" />
+            </div>
+            <span className="text-[11px] font-medium leading-none tracking-tight">Dashboard</span>
+          </button>
+
+          {/* Wiring Tab */}
+          <button
+            onClick={() => {
+              setActiveTab('wiring');
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
+            className={`py-1.5 px-1 rounded-xl flex flex-col items-center justify-center gap-1 transition-all active:scale-95 ${
+              activeTab === 'wiring'
+                ? 'text-cyan-400 font-bold'
+                : 'text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            <div
+              className={`p-1 rounded-lg transition-all ${
+                activeTab === 'wiring'
+                  ? 'bg-cyan-500/20 text-cyan-400 shadow-sm shadow-cyan-500/20'
+                  : 'text-slate-400'
+              }`}
+            >
+              <Radio className="w-5 h-5" />
+            </div>
+            <span className="text-[11px] font-medium leading-none tracking-tight">Wiring</span>
+          </button>
+
+          {/* Firmware Tab */}
+          <button
+            onClick={() => {
+              setActiveTab('firmware');
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
+            className={`py-1.5 px-1 rounded-xl flex flex-col items-center justify-center gap-1 transition-all active:scale-95 ${
+              activeTab === 'firmware'
+                ? 'text-cyan-400 font-bold'
+                : 'text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            <div
+              className={`p-1 rounded-lg transition-all ${
+                activeTab === 'firmware'
+                  ? 'bg-cyan-500/20 text-cyan-400 shadow-sm shadow-cyan-500/20'
+                  : 'text-slate-400'
+              }`}
+            >
+              <Cpu className="w-5 h-5" />
+            </div>
+            <span className="text-[11px] font-medium leading-none tracking-tight">Firmware</span>
+          </button>
+
+          {/* Docs Tab */}
+          <button
+            onClick={() => {
+              setActiveTab('docs');
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
+            className={`py-1.5 px-1 rounded-xl flex flex-col items-center justify-center gap-1 transition-all active:scale-95 ${
+              activeTab === 'docs'
+                ? 'text-cyan-400 font-bold'
+                : 'text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            <div
+              className={`p-1 rounded-lg transition-all ${
+                activeTab === 'docs'
+                  ? 'bg-cyan-500/20 text-cyan-400 shadow-sm shadow-cyan-500/20'
+                  : 'text-slate-400'
+              }`}
+            >
+              <BookOpen className="w-5 h-5" />
+            </div>
+            <span className="text-[11px] font-medium leading-none tracking-tight">Docs</span>
+          </button>
+        </div>
+      </nav>
     </div>
   );
 }

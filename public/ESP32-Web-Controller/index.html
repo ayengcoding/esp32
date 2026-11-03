@@ -49,14 +49,6 @@
           </button>
         </div>
       </div>
-
-      <!-- Mobile Sub-Navigation Bar -->
-      <nav class="mobile-subnav" aria-label="Mobile Sections">
-        <a href="#dashboard" class="mobile-subnav-link active">⚡ Controls</a>
-        <a href="#waveform" class="mobile-subnav-link">📈 Waveform</a>
-        <a href="#telemetry" class="mobile-subnav-link">📡 Telemetry</a>
-        <a href="#logs" class="mobile-subnav-link">📟 Console</a>
-      </nav>
     </header>
 
     <!-- Main Content Container -->
@@ -344,6 +336,28 @@
         </div>
       </div>
     </div>
+
+    <!-- Fixed Mobile Bottom Navigation Dock -->
+    <nav class="mobile-bottom-nav" aria-label="Mobile Bottom Navigation">
+      <div class="mobile-bottom-nav-inner">
+        <a href="#dashboard" class="mobile-bottom-nav-item active">
+          <span class="nav-icon">⚡</span>
+          <span class="nav-label">Controls</span>
+        </a>
+        <a href="#waveform" class="mobile-bottom-nav-item">
+          <span class="nav-icon">📈</span>
+          <span class="nav-label">Waveform</span>
+        </a>
+        <a href="#telemetry" class="mobile-bottom-nav-item">
+          <span class="nav-icon">📡</span>
+          <span class="nav-label">Telemetry</span>
+        </a>
+        <a href="#logs" class="mobile-bottom-nav-item">
+          <span class="nav-icon">📟</span>
+          <span class="nav-label">Console</span>
+        </a>
+      </div>
+    </nav>
 
     <!-- Main Controller Script -->
     <script src="./script.js"></script>

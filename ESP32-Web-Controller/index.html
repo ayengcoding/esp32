@@ -23,11 +23,11 @@
         <!-- Brand Wordmark -->
         <a href="./index.html" class="brand-zone">
           <div class="brand-icon">⚡</div>
-          <span>ESP32 Web Controller</span>
+          <span class="brand-text">ESP32 Controller</span>
         </a>
 
-        <!-- Top Navigation Links -->
-        <nav>
+        <!-- Top Navigation Links (Desktop) -->
+        <nav class="desktop-nav">
           <ul class="nav-links">
             <li><a href="#dashboard" class="nav-link active">Dashboard</a></li>
             <li><a href="#waveform" class="nav-link">Waveform</a></li>
@@ -39,16 +39,24 @@
         <!-- Top Actions -->
         <div class="header-actions">
           <button id="webSerialBtn" class="btn btn-secondary" title="Connect directly via USB Cable (Chrome / Edge)">
-            <span>🔌 Connect USB</span>
+            <span>🔌 USB</span>
           </button>
           <button id="openPairingBtn" class="btn btn-primary" title="Configure Device ID & Auth Key">
-            <span>🔑 Device Pairing</span>
+            <span>🔑 Pairing</span>
           </button>
           <button id="themeToggleBtn" class="btn btn-outline" title="Toggle Light / Dark Mode">
-            <span>☀️ Light</span>
+            <span>☀️</span>
           </button>
         </div>
       </div>
+
+      <!-- Mobile Sub-Navigation Bar -->
+      <nav class="mobile-subnav" aria-label="Mobile Sections">
+        <a href="#dashboard" class="mobile-subnav-link active">⚡ Controls</a>
+        <a href="#waveform" class="mobile-subnav-link">📈 Waveform</a>
+        <a href="#telemetry" class="mobile-subnav-link">📡 Telemetry</a>
+        <a href="#logs" class="mobile-subnav-link">📟 Console</a>
+      </nav>
     </header>
 
     <!-- Main Content Container -->

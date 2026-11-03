@@ -1,0 +1,351 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ESP32 Web Controller — Dual LED Dashboard</title>
+    <meta name="description" content="Secure, static GitHub Pages dashboard for controlling ESP32 dual LEDs (GPIO 13 & 25) with non-blocking timing and real-time telemetry." />
+    <!-- Preconnect Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Paho MQTT Library (CDN with fallback) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.1.0/paho-mqtt.min.js"></script>
+    
+    <!-- Relative stylesheet for GitHub Pages subdirectory compatibility -->
+    <link rel="stylesheet" href="./style.css" />
+  </head>
+  <body>
+    <!-- Top Header Navigation -->
+    <header class="top-header">
+      <div class="top-bar-inner">
+        <!-- Brand Wordmark -->
+        <a href="./index.html" class="brand-zone">
+          <div class="brand-icon">⚡</div>
+          <span class="brand-text">ESP32 Controller</span>
+        </a>
+
+        <!-- Top Navigation Links (Desktop) -->
+        <nav class="desktop-nav">
+          <ul class="nav-links">
+            <li><a href="#dashboard" class="nav-link active">Dashboard</a></li>
+            <li><a href="#waveform" class="nav-link">Waveform</a></li>
+            <li><a href="#telemetry" class="nav-link">Telemetry</a></li>
+            <li><a href="#logs" class="nav-link">Console</a></li>
+          </ul>
+        </nav>
+
+        <!-- Top Actions -->
+        <div class="header-actions">
+          <button id="webSerialBtn" class="btn btn-secondary" title="Connect directly via USB Cable (Chrome / Edge)">
+            <span>🔌 USB</span>
+          </button>
+          <button id="openPairingBtn" class="btn btn-primary" title="Configure Device ID & Auth Key">
+            <span>🔑 Pairing</span>
+          </button>
+          <button id="themeToggleBtn" class="btn btn-outline" title="Toggle Light / Dark Mode">
+            <span>☀️</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Mobile Sub-Navigation Bar -->
+      <nav class="mobile-subnav" aria-label="Mobile Sections">
+        <a href="#dashboard" class="mobile-subnav-link active">⚡ Controls</a>
+        <a href="#waveform" class="mobile-subnav-link">📈 Waveform</a>
+        <a href="#telemetry" class="mobile-subnav-link">📡 Telemetry</a>
+        <a href="#logs" class="mobile-subnav-link">📟 Console</a>
+      </nav>
+    </header>
+
+    <!-- Main Content Container -->
+    <main class="app-container" id="dashboard">
+      <!-- Telemetry Status Bar -->
+      <section class="telemetry-strip" id="telemetry" aria-label="ESP32 Telemetry">
+        <div class="telemetry-item">
+          <span class="telemetry-label">ESP32 Status</span>
+          <div class="telemetry-value">
+            <span id="connectionStatusBadge" class="status-badge connecting">
+              <span class="status-dot"></span>
+              <span id="connectionStatusText">CONNECTING...</span>
+            </span>
+          </div>
+        </div>
+
+        <div class="telemetry-item">
+          <span class="telemetry-label">Device IP Address</span>
+          <div class="telemetry-value font-mono tabular-nums" id="telemetryIp">--</div>
+        </div>
+
+        <div class="telemetry-item">
+          <span class="telemetry-label">Wi-Fi Network / RSSI</span>
+          <div class="telemetry-value font-mono tabular-nums">
+            <span id="telemetrySsid">--</span>
+            <span style="color: var(--text-muted); font-size: 0.8125rem;">(</span>
+            <span id="telemetryRssi" style="color: var(--accent-cyan); font-size: 0.8125rem;">--</span>
+            <span style="color: var(--text-muted); font-size: 0.8125rem;">)</span>
+          </div>
+        </div>
+
+        <div class="telemetry-item">
+          <span class="telemetry-label">RTT Latency (Ping)</span>
+          <div class="telemetry-value font-mono tabular-nums" id="telemetryLatency">--</div>
+        </div>
+
+        <div class="telemetry-item">
+          <span class="telemetry-label">Free Heap / Uptime</span>
+          <div class="telemetry-value font-mono tabular-nums">
+            <span id="telemetryHeap">--</span>
+            <span style="color: var(--text-muted); font-size: 0.8125rem;">/</span>
+            <span id="telemetryUptime" style="font-size: 0.8125rem;">--</span>
+          </div>
+        </div>
+
+        <div class="telemetry-item">
+          <span class="telemetry-label">Security (Rejected)</span>
+          <div class="telemetry-value font-mono tabular-nums" id="telemetryUnauth" style="color: var(--status-online);">0</div>
+        </div>
+      </section>
+
+      <!-- Dual LED Control Cards -->
+      <section class="dashboard-grid">
+        <!-- LED 1 Control Card (GPIO 13) -->
+        <article class="card" aria-label="LED 1 Controls">
+          <div class="card-header">
+            <div class="card-title-group">
+              <span class="gpio-badge">GPIO 13</span>
+              <h2 class="card-title">LED 1 (Signal)</h2>
+            </div>
+            <div id="led1StateBadge" class="state-indicator">LOW (0V)</div>
+          </div>
+
+          <!-- Mode Selector Tabs -->
+          <div class="segmented-control" role="group" aria-label="LED 1 Mode">
+            <button id="led1BtnOff" class="segmented-btn active" type="button">OFF</button>
+            <button id="led1BtnOn" class="segmented-btn" type="button">ON</button>
+            <button id="led1BtnBlink" class="segmented-btn" type="button">BLINK</button>
+          </div>
+
+          <!-- Pulse ON Duration -->
+          <div class="slider-group">
+            <div class="slider-label-row">
+              <label for="led1OnSlider">Pulse ON Duration</label>
+              <div class="slider-val-box">
+                <input type="number" id="led1OnNum" class="num-input tabular-nums" min="10" max="10000" step="10" value="500" />
+                <span style="font-size: 0.75rem; color: var(--text-muted);">ms</span>
+              </div>
+            </div>
+            <input type="range" id="led1OnSlider" min="10" max="2500" step="10" value="500" />
+          </div>
+
+          <!-- Pulse OFF Duration -->
+          <div class="slider-group">
+            <div class="slider-label-row">
+              <label for="led1OffSlider">Pulse OFF Duration</label>
+              <div class="slider-val-box">
+                <input type="number" id="led1OffNum" class="num-input tabular-nums" min="10" max="10000" step="10" value="500" />
+                <span style="font-size: 0.75rem; color: var(--text-muted);">ms</span>
+              </div>
+            </div>
+            <input type="range" id="led1OffSlider" min="10" max="2500" step="10" value="500" />
+          </div>
+
+          <!-- Computed Frequency & Duty Cycle -->
+          <div class="calc-metrics-row">
+            <div class="calc-metric">
+              <span class="calc-label">Blink Frequency</span>
+              <span class="calc-val tabular-nums" id="led1Freq">1.00 Hz</span>
+            </div>
+            <div class="calc-metric">
+              <span class="calc-label">Duty Cycle</span>
+              <span class="calc-val tabular-nums" id="led1Duty">50.0%</span>
+            </div>
+          </div>
+
+          <!-- Quick Presets -->
+          <div class="presets-group">
+            <span style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600;">Presets:</span>
+            <button type="button" class="preset-chip" id="led1PresetSlow">Slow (1s)</button>
+            <button type="button" class="preset-chip" id="led1PresetNormal">Normal (500ms)</button>
+            <button type="button" class="preset-chip" id="led1PresetFast">Fast (100ms)</button>
+            <button type="button" class="preset-chip" id="led1PresetStrobe">Strobe (50ms)</button>
+          </div>
+        </article>
+
+        <!-- LED 2 Control Card (GPIO 25) -->
+        <article class="card" aria-label="LED 2 Controls">
+          <div class="card-header">
+            <div class="card-title-group">
+              <span class="gpio-badge">GPIO 25</span>
+              <h2 class="card-title">LED 2 (Indicator)</h2>
+            </div>
+            <div id="led2StateBadge" class="state-indicator">LOW (0V)</div>
+          </div>
+
+          <!-- Mode Selector Tabs -->
+          <div class="segmented-control" role="group" aria-label="LED 2 Mode">
+            <button id="led2BtnOff" class="segmented-btn active" type="button">OFF</button>
+            <button id="led2BtnOn" class="segmented-btn" type="button">ON</button>
+            <button id="led2BtnBlink" class="segmented-btn" type="button">BLINK</button>
+          </div>
+
+          <!-- Pulse ON Duration -->
+          <div class="slider-group">
+            <div class="slider-label-row">
+              <label for="led2OnSlider">Pulse ON Duration</label>
+              <div class="slider-val-box">
+                <input type="number" id="led2OnNum" class="num-input tabular-nums" min="10" max="10000" step="10" value="500" />
+                <span style="font-size: 0.75rem; color: var(--text-muted);">ms</span>
+              </div>
+            </div>
+            <input type="range" id="led2OnSlider" min="10" max="2500" step="10" value="500" />
+          </div>
+
+          <!-- Pulse OFF Duration -->
+          <div class="slider-group">
+            <div class="slider-label-row">
+              <label for="led2OffSlider">Pulse OFF Duration</label>
+              <div class="slider-val-box">
+                <input type="number" id="led2OffNum" class="num-input tabular-nums" min="10" max="10000" step="10" value="500" />
+                <span style="font-size: 0.75rem; color: var(--text-muted);">ms</span>
+              </div>
+            </div>
+            <input type="range" id="led2OffSlider" min="10" max="2500" step="10" value="500" />
+          </div>
+
+          <!-- Computed Frequency & Duty Cycle -->
+          <div class="calc-metrics-row">
+            <div class="calc-metric">
+              <span class="calc-label">Blink Frequency</span>
+              <span class="calc-val tabular-nums" id="led2Freq">1.00 Hz</span>
+            </div>
+            <div class="calc-metric">
+              <span class="calc-label">Duty Cycle</span>
+              <span class="calc-val tabular-nums" id="led2Duty">50.0%</span>
+            </div>
+          </div>
+
+          <!-- Quick Presets -->
+          <div class="presets-group">
+            <span style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600;">Presets:</span>
+            <button type="button" class="preset-chip" id="led2PresetSlow">Slow (1s)</button>
+            <button type="button" class="preset-chip" id="led2PresetNormal">Normal (500ms)</button>
+            <button type="button" class="preset-chip" id="led2PresetFast">Fast (100ms)</button>
+            <button type="button" class="preset-chip" id="led2PresetStrobe">Strobe (50ms)</button>
+          </div>
+        </article>
+      </section>
+
+      <!-- Digital Waveform Oscilloscope Section -->
+      <section class="waveform-section" id="waveform">
+        <div class="waveform-header">
+          <div>
+            <h3 style="font-size: 1.125rem; font-weight: 700;">Digital Logic Waveform (Oscilloscope)</h3>
+            <p style="font-size: 0.8125rem; color: var(--text-secondary);">Real-time high/low logic transitions (3.3V / 0V) across both GPIO channels</p>
+          </div>
+
+          <div class="waveform-legends">
+            <div class="legend-item">
+              <span class="legend-color legend-led1"></span>
+              <span>GPIO 13 (LED 1)</span>
+            </div>
+            <div class="legend-item">
+              <span class="legend-color legend-led2"></span>
+              <span>GPIO 25 (LED 2)</span>
+            </div>
+            <button type="button" class="btn btn-outline" id="pauseWaveformBtn" style="padding: 0.25rem 0.625rem; font-size: 0.75rem;">⏸ Pause</button>
+            <button type="button" class="btn btn-outline" id="clearWaveformBtn" style="padding: 0.25rem 0.625rem; font-size: 0.75rem;">Clear</button>
+          </div>
+        </div>
+
+        <div class="canvas-wrapper">
+          <canvas id="waveformCanvas"></canvas>
+        </div>
+      </section>
+
+      <!-- Communication & Diagnostics Console -->
+      <section class="card" id="logs">
+        <div class="card-header">
+          <div>
+            <h3 class="card-title">Live Communication & Security Log</h3>
+            <p style="font-size: 0.8125rem; color: var(--text-secondary);">Bidirectional MQTT (WSS) and WebSerial command trace</p>
+          </div>
+          <button type="button" class="btn btn-outline" id="clearLogsBtn" style="padding: 0.25rem 0.625rem; font-size: 0.75rem;">Clear Log</button>
+        </div>
+
+        <div id="logOutput" style="height: 180px; overflow-y: auto; background-color: var(--bg-primary); padding: 0.75rem; border-radius: var(--radius-sm); border: 1px solid var(--border-subtle);">
+          <!-- Dynamic log lines injected here -->
+        </div>
+      </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="app-footer">
+      <div style="max-width: 1360px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;">
+        <div>
+          <span>ESP32 Web Controller</span>
+          <span aria-hidden="true" style="margin: 0 0.5rem;">·</span>
+          <span>Deployable to GitHub Pages</span>
+          <span aria-hidden="true" style="margin: 0 0.5rem;">·</span>
+          <span id="displayDeviceId" class="font-mono">ESP32-LED-CTRL-01</span>
+        </div>
+        <div style="color: var(--text-muted);">
+          <span>Port 1883 / 8884 WSS Relay</span>
+          <span aria-hidden="true" style="margin: 0 0.5rem;">·</span>
+          <span>Zero Mixed-Content Violations</span>
+        </div>
+      </div>
+    </footer>
+
+    <!-- Pairing & Credentials Modal -->
+    <div class="modal-overlay" id="pairingModal" role="dialog" aria-modal="true" aria-labelledby="pairingModalTitle">
+      <div class="modal-card">
+        <div class="modal-header">
+          <h3 id="pairingModalTitle" style="font-size: 1.125rem; font-weight: 700;">Device Pairing & Security Settings</h3>
+          <button type="button" id="closePairingBtn" class="btn btn-outline btn-icon-only">✕</button>
+        </div>
+
+        <div class="callout-box">
+          <div style="font-size: 1.25rem;">🔒</div>
+          <div>
+            <strong>Private Authentication:</strong>
+            Credentials are saved strictly in your browser's <code style="font-family: var(--font-mono);">localStorage</code>. They are never pushed or exposed in public GitHub files.
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="cfgDeviceId" class="form-label">Target Device ID</label>
+          <input type="text" id="cfgDeviceId" class="form-input font-mono" placeholder="e.g. ESP32-LED-CTRL-01" />
+          <span class="form-hint">Must match the DEVICE_ID constant in your ESP32 .ino firmware.</span>
+        </div>
+
+        <div class="form-group">
+          <label for="cfgAuthToken" class="form-label">Secret Security Token / PIN</label>
+          <div style="display: flex; gap: 0.5rem;">
+            <input type="text" id="cfgAuthToken" class="form-input font-mono" placeholder="e.g. secret_token_1234" />
+            <button type="button" id="genTokenBtn" class="btn btn-secondary" style="font-size: 0.75rem;">Generate</button>
+          </div>
+          <span class="form-hint">Only commands carrying this token are executed by your ESP32.</span>
+        </div>
+
+        <div class="form-group">
+          <label for="cfgBroker" class="form-label">Secure MQTT Broker (WSS URL)</label>
+          <select id="cfgBroker" class="form-select font-mono">
+            <option value="wss://broker.hivemq.com:8884/mqtt">HiveMQ Public Broker (wss://broker.hivemq.com:8884/mqtt)</option>
+            <option value="wss://broker.emqx.io:8084/mqtt">EMQX Public Broker (wss://broker.emqx.io:8084/mqtt)</option>
+          </select>
+          <span class="form-hint">Public WSS brokers are 100% free, require no signup, and support HTTPS websites.</span>
+        </div>
+
+        <div style="display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 0.5rem;">
+          <button type="button" class="btn btn-secondary" onclick="document.getElementById('pairingModal').classList.remove('open')">Cancel</button>
+          <button type="button" class="btn btn-primary" id="savePairingBtn">Save & Connect</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main Controller Script -->
+    <script src="./script.js"></script>
+  </body>
+</html>

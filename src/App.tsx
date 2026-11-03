@@ -615,7 +615,7 @@ export default function App() {
       addLog('info', 'Generating complete GitHub Pages project ZIP archive...');
       const zip = new JSZip();
 
-      // Read standalone static files from filesystem or templates
+      // Read standalone static files
       const generatedIno = generateFirmwareCode({
         wifiSsid: fwWifiSsid,
         wifiPass: fwWifiPass,
@@ -624,25 +624,29 @@ export default function App() {
         brokerHost: 'broker.hivemq.com'
       });
 
-      // Fetch or inject standalone files
-      zip.file('index.html', `<!doctype html>
-<html lang="en" data-theme="dark">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>ESP32 Web Controller</title>
-    <link rel="stylesheet" href="./style.css" />
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.1.0/paho-mqtt.min.js"></script>
-  </head>
-  <body>
-    <!-- Complete static dashboard deployed to GitHub Pages -->
-    <script src="./script.js"></script>
-  </body>
-</html>`);
+      let htmlText = '';
+      let cssText = '';
+      let jsText = '';
+
+      try {
+        const [resHtml, resCss, resJs] = await Promise.all([
+          fetch('/ESP32-Web-Controller/index.html'),
+          fetch('/ESP32-Web-Controller/style.css'),
+          fetch('/ESP32-Web-Controller/script.js')
+        ]);
+        if (resHtml.ok) htmlText = await resHtml.text();
+        if (resCss.ok) cssText = await resCss.text();
+        if (resJs.ok) jsText = await resJs.text();
+      } catch (e) {
+        console.warn('Could not fetch static files dynamically:', e);
+      }
 
       // Add actual subfolder structure
       const rootFolder = zip.folder('ESP32-Web-Controller');
       if (rootFolder) {
+        if (htmlText) rootFolder.file('index.html', htmlText);
+        if (cssText) rootFolder.file('style.css', cssText);
+        if (jsText) rootFolder.file('script.js', jsText);
         rootFolder.file('README.md', README_DOC);
         rootFolder.folder('firmware')?.file('esp32_controller.ino', generatedIno);
         const docsFolder = rootFolder.folder('docs');
@@ -692,24 +696,25 @@ export default function App() {
           Zone 2: 4-5 Navigation Links
           Zone 3: Primary Actions (USB, Pairing, Theme, ZIP)
       ========================================================================= */}
-      <header className={`sticky top-0 z-40 border-b backdrop-blur-md ${isDark ? 'bg-slate-900/85 border-slate-800' : 'bg-white/85 border-slate-200'}`}>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-8">
-          {/* Zone 1: Single text wordmark */}
-          <div className="flex items-center gap-3 shrink-0">
-            <div className="w-9 h-9 rounded-lg bg-gradient-to-tr from-cyan-500 to-blue-600 flex items-center justify-center text-white shadow-sm shadow-cyan-500/20">
-              <Zap className="w-5 h-5" />
+      <header className={`sticky top-0 z-40 border-b backdrop-blur-md ${isDark ? 'bg-slate-900/90 border-slate-800' : 'bg-white/90 border-slate-200'}`}>
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 h-16 flex items-center justify-between gap-3 sm:gap-8">
+          {/* Zone 1: Wordmark Brand */}
+          <div className="flex items-center gap-2.5 sm:gap-3 shrink-0">
+            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg bg-gradient-to-tr from-cyan-500 to-blue-600 flex items-center justify-center text-white shadow-sm shadow-cyan-500/20 shrink-0">
+              <Zap className="w-4 h-4 sm:w-5 sm:h-5" />
             </div>
             <div className="flex flex-col">
-              <span className="font-bold text-base tracking-tight leading-tight whitespace-nowrap">
-                ESP32 Web Controller
+              <span className="font-bold text-sm sm:text-base tracking-tight leading-tight whitespace-nowrap">
+                <span className="sm:hidden">ESP32 Controller</span>
+                <span className="hidden sm:inline">ESP32 Web Controller</span>
               </span>
-              <span className="text-[11px] font-mono text-cyan-500 leading-none">
-                GitHub Pages Edition
+              <span className="text-[10px] sm:text-[11px] font-mono text-cyan-500 leading-none">
+                GitHub Pages Ready
               </span>
             </div>
           </div>
 
-          {/* Zone 2: Navigation Links */}
+          {/* Zone 2: Navigation Links (Desktop) */}
           <nav className="hidden md:flex items-center gap-6 text-sm font-medium">
             <button
               onClick={() => setActiveTab('dashboard')}
@@ -754,7 +759,7 @@ export default function App() {
           </nav>
 
           {/* Zone 3: Header Actions */}
-          <div className="flex items-center gap-2.5 shrink-0">
+          <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
             <button
               onClick={handleConnectSerial}
               className={`hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border transition-all whitespace-nowrap ${
@@ -772,10 +777,12 @@ export default function App() {
 
             <button
               onClick={() => setShowPairingModal(true)}
-              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white shadow-sm transition-all whitespace-nowrap"
+              className="inline-flex items-center gap-1.5 px-3 py-2 sm:py-1.5 text-xs font-semibold rounded-lg bg-cyan-600 hover:bg-cyan-500 active:bg-cyan-700 text-white shadow-sm transition-all whitespace-nowrap min-h-[38px] sm:min-h-0"
+              title="Configure Device ID & Auth Key"
             >
               <Key className="w-3.5 h-3.5" />
-              <span>Device Pairing</span>
+              <span className="hidden sm:inline">Device Pairing</span>
+              <span className="sm:hidden">Pairing</span>
             </button>
 
             <button
@@ -793,7 +800,7 @@ export default function App() {
 
             <button
               onClick={() => setIsDark(!isDark)}
-              className={`p-2 rounded-lg border transition-colors ${
+              className={`p-2 rounded-lg border transition-colors min-w-[38px] min-h-[38px] flex items-center justify-center ${
                 isDark
                   ? 'bg-slate-800 border-slate-700 hover:bg-slate-700 text-amber-400'
                   : 'bg-slate-100 border-slate-300 hover:bg-slate-200 text-slate-600'
@@ -804,6 +811,59 @@ export default function App() {
             </button>
           </div>
         </div>
+
+        {/* Mobile Sub-Navigation Bar (Sticky & Touch-Friendly) */}
+        <nav
+          aria-label="Mobile Navigation"
+          className={`md:hidden border-t px-2 py-1.5 flex items-center justify-around gap-1 ${
+            isDark ? 'bg-slate-900/95 border-slate-800' : 'bg-slate-100/95 border-slate-200'
+          }`}
+        >
+          <button
+            onClick={() => setActiveTab('dashboard')}
+            className={`flex-1 py-2 px-1 text-xs font-semibold rounded-lg flex flex-col items-center justify-center gap-1 transition-all min-h-[44px] ${
+              activeTab === 'dashboard'
+                ? 'bg-cyan-500/15 text-cyan-400 font-bold'
+                : 'text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            <Sliders className="w-4 h-4" />
+            <span>Control</span>
+          </button>
+          <button
+            onClick={() => setActiveTab('wiring')}
+            className={`flex-1 py-2 px-1 text-xs font-semibold rounded-lg flex flex-col items-center justify-center gap-1 transition-all min-h-[44px] ${
+              activeTab === 'wiring'
+                ? 'bg-cyan-500/15 text-cyan-400 font-bold'
+                : 'text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            <Radio className="w-4 h-4" />
+            <span>Wiring</span>
+          </button>
+          <button
+            onClick={() => setActiveTab('firmware')}
+            className={`flex-1 py-2 px-1 text-xs font-semibold rounded-lg flex flex-col items-center justify-center gap-1 transition-all min-h-[44px] ${
+              activeTab === 'firmware'
+                ? 'bg-cyan-500/15 text-cyan-400 font-bold'
+                : 'text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            <Cpu className="w-4 h-4" />
+            <span>Firmware</span>
+          </button>
+          <button
+            onClick={() => setActiveTab('docs')}
+            className={`flex-1 py-2 px-1 text-xs font-semibold rounded-lg flex flex-col items-center justify-center gap-1 transition-all min-h-[44px] ${
+              activeTab === 'docs'
+                ? 'bg-cyan-500/15 text-cyan-400 font-bold'
+                : 'text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            <BookOpen className="w-4 h-4" />
+            <span>Docs</span>
+          </button>
+        </nav>
       </header>
 
       {/* =========================================================================
@@ -818,18 +878,18 @@ export default function App() {
             {/* Telemetry Strip */}
             <section
               aria-label="Device Hardware Telemetry"
-              className={`grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 p-4 rounded-xl border ${
+              className={`grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5 sm:gap-4 p-3.5 sm:p-4 rounded-xl border ${
                 isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'
               }`}
             >
               {/* Connection Status */}
-              <div className="flex flex-col gap-1">
-                <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+              <div className="flex flex-col gap-0.5 sm:gap-1 min-w-0">
+                <span className="text-[10px] sm:text-[11px] font-semibold uppercase tracking-wider text-slate-500">
                   ESP32 Status
                 </span>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1.5">
                   <span
-                    className={`w-2.5 h-2.5 rounded-full ${
+                    className={`w-2.5 h-2.5 rounded-full shrink-0 ${
                       connectionStatus === 'online'
                         ? 'bg-emerald-500 ring-4 ring-emerald-500/20'
                         : connectionStatus === 'connecting'
@@ -837,82 +897,83 @@ export default function App() {
                         : 'bg-rose-500 ring-4 ring-rose-500/20'
                     }`}
                   />
-                  <span className="text-sm font-bold uppercase tracking-tight">
+                  <span className="text-xs sm:text-sm font-bold uppercase tracking-tight truncate">
                     {connectionStatus}
                   </span>
                 </div>
               </div>
 
               {/* IP Address */}
-              <div className="flex flex-col gap-1">
-                <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+              <div className="flex flex-col gap-0.5 sm:gap-1 min-w-0">
+                <span className="text-[10px] sm:text-[11px] font-semibold uppercase tracking-wider text-slate-500">
                   ESP32 Local IP
                 </span>
-                <span className="text-sm font-mono font-semibold tabular-nums">
+                <span className="text-xs sm:text-sm font-mono font-semibold tabular-nums truncate">
                   {telemetry.ip}
                 </span>
               </div>
 
               {/* Wi-Fi RSSI */}
-              <div className="flex flex-col gap-1">
-                <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+              <div className="flex flex-col gap-0.5 sm:gap-1 min-w-0">
+                <span className="text-[10px] sm:text-[11px] font-semibold uppercase tracking-wider text-slate-500">
                   Wi-Fi Signal
                 </span>
-                <div className="flex items-center gap-1.5 text-sm font-mono tabular-nums">
-                  <Wifi className="w-3.5 h-3.5 text-cyan-500" />
-                  <span>{telemetry.rssi !== null ? `${telemetry.rssi} dBm` : '--'}</span>
+                <div className="flex items-center gap-1 text-xs sm:text-sm font-mono tabular-nums truncate">
+                  <Wifi className="w-3.5 h-3.5 text-cyan-500 shrink-0" />
+                  <span className="truncate">{telemetry.ssid !== '--' ? telemetry.ssid : ''}</span>
+                  <span className="text-cyan-400 font-semibold">{telemetry.rssi !== null ? `${telemetry.rssi} dBm` : '--'}</span>
                 </div>
               </div>
 
               {/* Latency */}
-              <div className="flex flex-col gap-1">
-                <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+              <div className="flex flex-col gap-0.5 sm:gap-1 min-w-0">
+                <span className="text-[10px] sm:text-[11px] font-semibold uppercase tracking-wider text-slate-500">
                   RTT Latency
                 </span>
-                <div className="flex items-center gap-1.5 text-sm font-mono tabular-nums">
-                  <Activity className="w-3.5 h-3.5 text-blue-500" />
+                <div className="flex items-center gap-1.5 text-xs sm:text-sm font-mono tabular-nums">
+                  <Activity className="w-3.5 h-3.5 text-blue-500 shrink-0" />
                   <span>{telemetry.latencyMs !== null ? `${telemetry.latencyMs} ms` : '--'}</span>
                 </div>
               </div>
 
               {/* Free Heap */}
-              <div className="flex flex-col gap-1">
-                <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+              <div className="flex flex-col gap-0.5 sm:gap-1 min-w-0">
+                <span className="text-[10px] sm:text-[11px] font-semibold uppercase tracking-wider text-slate-500">
                   Free Memory
                 </span>
-                <div className="flex items-center gap-1.5 text-sm font-mono tabular-nums">
-                  <Cpu className="w-3.5 h-3.5 text-indigo-400" />
+                <div className="flex items-center gap-1.5 text-xs sm:text-sm font-mono tabular-nums truncate">
+                  <Cpu className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
                   <span>{telemetry.freeHeap ? `${(telemetry.freeHeap / 1024).toFixed(1)} KB` : '--'}</span>
                 </div>
               </div>
 
               {/* Security Counter */}
-              <div className="flex flex-col gap-1">
-                <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+              <div className="flex flex-col gap-0.5 sm:gap-1 min-w-0">
+                <span className="text-[10px] sm:text-[11px] font-semibold uppercase tracking-wider text-slate-500">
                   Security (Rejections)
                 </span>
-                <div className="flex items-center gap-1.5 text-sm font-mono tabular-nums text-emerald-500">
-                  <ShieldAlert className="w-3.5 h-3.5" />
+                <div className="flex items-center gap-1.5 text-xs sm:text-sm font-mono tabular-nums text-emerald-500">
+                  <ShieldAlert className="w-3.5 h-3.5 shrink-0" />
                   <span>{telemetry.unauthorizedAttempts}</span>
                 </div>
               </div>
             </section>
 
             {/* Dual LED Controls Grid */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
               {/* LED 1 Card (GPIO 13) */}
               <section
                 aria-label="LED 1 Controls"
-                className={`p-6 rounded-2xl border flex flex-col gap-5 ${
+                className={`p-4 sm:p-6 rounded-2xl border flex flex-col gap-4 sm:gap-5 ${
                   isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'
                 }`}
               >
-                <div className="flex items-center justify-between border-b pb-4 border-slate-800/60 dark:border-slate-800">
-                  <div className="flex items-center gap-3">
+                <div className="flex items-center justify-between border-b pb-3.5 border-slate-800/60 dark:border-slate-800">
+                  <div className="flex items-center gap-2.5 sm:gap-3">
                     <span className="px-2 py-0.5 text-xs font-mono font-bold rounded bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
                       GPIO 13
                     </span>
-                    <h2 className="text-lg font-bold">LED 1 (Signal Channel)</h2>
+                    <h2 className="text-base sm:text-lg font-bold">LED 1 (Signal)</h2>
                   </div>
                   <div
                     className={`px-2.5 py-1 text-xs font-mono font-bold rounded flex items-center gap-1.5 transition-all ${
@@ -926,13 +987,13 @@ export default function App() {
                   </div>
                 </div>
 
-                {/* Segmented Mode Control */}
+                {/* Segmented Mode Control (Touch Friendly) */}
                 <div className="flex items-center p-1 rounded-xl bg-slate-800/80 border border-slate-700/60 gap-1">
                   {(['OFF', 'ON', 'BLINK'] as const).map((m) => (
                     <button
                       key={m}
                       onClick={() => handleSetLed(1, m)}
-                      className={`flex-1 py-2 text-xs font-semibold rounded-lg transition-all ${
+                      className={`flex-1 py-2.5 sm:py-2 text-xs sm:text-sm font-semibold rounded-lg transition-all min-h-[42px] ${
                         led1.mode === m
                           ? 'bg-cyan-600 text-white shadow-sm'
                           : 'text-slate-400 hover:text-slate-200'
@@ -944,7 +1005,7 @@ export default function App() {
                 </div>
 
                 {/* Slider: ON Duration */}
-                <div className="flex flex-col gap-2">
+                <div className="flex flex-col gap-1.5 sm:gap-2">
                   <div className="flex items-center justify-between text-xs font-medium text-slate-400">
                     <label htmlFor="led1-on-slider">Pulse ON Duration</label>
                     <div className="flex items-center gap-1">
@@ -955,7 +1016,7 @@ export default function App() {
                         step="10"
                         value={led1.onMs}
                         onChange={(e) => handleSliderChange(1, 'onMs', parseInt(e.target.value) || 10)}
-                        className={`w-20 px-2 py-1 text-xs font-mono text-right rounded border tabular-nums ${
+                        className={`w-20 px-2 py-1.5 text-xs font-mono text-right rounded border tabular-nums ${
                           isDark ? 'bg-slate-800 border-slate-700 text-slate-100' : 'bg-slate-100 border-slate-300 text-slate-900'
                         }`}
                       />
@@ -970,12 +1031,12 @@ export default function App() {
                     step="10"
                     value={led1.onMs}
                     onChange={(e) => handleSliderChange(1, 'onMs', parseInt(e.target.value))}
-                    className="w-full accent-cyan-500 cursor-pointer"
+                    className="w-full accent-cyan-500 cursor-pointer h-7"
                   />
                 </div>
 
                 {/* Slider: OFF Duration */}
-                <div className="flex flex-col gap-2">
+                <div className="flex flex-col gap-1.5 sm:gap-2">
                   <div className="flex items-center justify-between text-xs font-medium text-slate-400">
                     <label htmlFor="led1-off-slider">Pulse OFF Duration</label>
                     <div className="flex items-center gap-1">
@@ -986,7 +1047,7 @@ export default function App() {
                         step="10"
                         value={led1.offMs}
                         onChange={(e) => handleSliderChange(1, 'offMs', parseInt(e.target.value) || 10)}
-                        className={`w-20 px-2 py-1 text-xs font-mono text-right rounded border tabular-nums ${
+                        className={`w-20 px-2 py-1.5 text-xs font-mono text-right rounded border tabular-nums ${
                           isDark ? 'bg-slate-800 border-slate-700 text-slate-100' : 'bg-slate-100 border-slate-300 text-slate-900'
                         }`}
                       />
@@ -1001,17 +1062,17 @@ export default function App() {
                     step="10"
                     value={led1.offMs}
                     onChange={(e) => handleSliderChange(1, 'offMs', parseInt(e.target.value))}
-                    className="w-full accent-cyan-500 cursor-pointer"
+                    className="w-full accent-cyan-500 cursor-pointer h-7"
                   />
                 </div>
 
                 {/* Calculated Frequency and Duty Cycle */}
-                <div className={`grid grid-cols-2 gap-3 p-3.5 rounded-xl border ${isDark ? 'bg-slate-800/50 border-slate-800' : 'bg-slate-100/70 border-slate-200'}`}>
+                <div className={`grid grid-cols-2 gap-2.5 sm:gap-3 p-3 sm:p-3.5 rounded-xl border ${isDark ? 'bg-slate-800/50 border-slate-800' : 'bg-slate-100/70 border-slate-200'}`}>
                   <div className="flex flex-col">
                     <span className="text-[10px] uppercase font-semibold text-slate-500">
                       Blinking Frequency
                     </span>
-                    <span className="text-base font-mono font-bold tabular-nums text-cyan-400">
+                    <span className="text-sm sm:text-base font-mono font-bold tabular-nums text-cyan-400">
                       {led1Freq} Hz
                     </span>
                   </div>
@@ -1019,36 +1080,36 @@ export default function App() {
                     <span className="text-[10px] uppercase font-semibold text-slate-500">
                       Duty Cycle
                     </span>
-                    <span className="text-base font-mono font-bold tabular-nums text-cyan-400">
+                    <span className="text-sm sm:text-base font-mono font-bold tabular-nums text-cyan-400">
                       {led1Duty} %
                     </span>
                   </div>
                 </div>
 
-                {/* Presets */}
+                {/* Presets (Touch targets >= 40px) */}
                 <div className="flex items-center gap-2 flex-wrap text-xs pt-1">
                   <span className="text-slate-500 font-semibold">Presets:</span>
                   <button
                     onClick={() => handleSetLed(1, 'BLINK', 1000, 1000)}
-                    className="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors"
+                    className="px-3 py-2 sm:py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-200 transition-all min-h-[38px] flex items-center"
                   >
                     Slow (1s)
                   </button>
                   <button
                     onClick={() => handleSetLed(1, 'BLINK', 500, 500)}
-                    className="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors"
+                    className="px-3 py-2 sm:py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-200 transition-all min-h-[38px] flex items-center"
                   >
                     Normal (500ms)
                   </button>
                   <button
                     onClick={() => handleSetLed(1, 'BLINK', 100, 100)}
-                    className="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors"
+                    className="px-3 py-2 sm:py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-200 transition-all min-h-[38px] flex items-center"
                   >
                     Fast (100ms)
                   </button>
                   <button
                     onClick={() => handleSetLed(1, 'BLINK', 50, 450)}
-                    className="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors"
+                    className="px-3 py-2 sm:py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-200 transition-all min-h-[38px] flex items-center"
                   >
                     Strobe (50ms)
                   </button>
@@ -1058,16 +1119,16 @@ export default function App() {
               {/* LED 2 Card (GPIO 25) */}
               <section
                 aria-label="LED 2 Controls"
-                className={`p-6 rounded-2xl border flex flex-col gap-5 ${
+                className={`p-4 sm:p-6 rounded-2xl border flex flex-col gap-4 sm:gap-5 ${
                   isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'
                 }`}
               >
-                <div className="flex items-center justify-between border-b pb-4 border-slate-800/60 dark:border-slate-800">
-                  <div className="flex items-center gap-3">
+                <div className="flex items-center justify-between border-b pb-3.5 border-slate-800/60 dark:border-slate-800">
+                  <div className="flex items-center gap-2.5 sm:gap-3">
                     <span className="px-2 py-0.5 text-xs font-mono font-bold rounded bg-amber-500/10 text-amber-400 border border-amber-500/20">
                       GPIO 25
                     </span>
-                    <h2 className="text-lg font-bold">LED 2 (Indicator Channel)</h2>
+                    <h2 className="text-base sm:text-lg font-bold">LED 2 (Indicator)</h2>
                   </div>
                   <div
                     className={`px-2.5 py-1 text-xs font-mono font-bold rounded flex items-center gap-1.5 transition-all ${
@@ -1087,7 +1148,7 @@ export default function App() {
                     <button
                       key={m}
                       onClick={() => handleSetLed(2, m)}
-                      className={`flex-1 py-2 text-xs font-semibold rounded-lg transition-all ${
+                      className={`flex-1 py-2.5 sm:py-2 text-xs sm:text-sm font-semibold rounded-lg transition-all min-h-[42px] ${
                         led2.mode === m
                           ? 'bg-amber-600 text-white shadow-sm'
                           : 'text-slate-400 hover:text-slate-200'
@@ -1099,7 +1160,7 @@ export default function App() {
                 </div>
 
                 {/* Slider: ON Duration */}
-                <div className="flex flex-col gap-2">
+                <div className="flex flex-col gap-1.5 sm:gap-2">
                   <div className="flex items-center justify-between text-xs font-medium text-slate-400">
                     <label htmlFor="led2-on-slider">Pulse ON Duration</label>
                     <div className="flex items-center gap-1">
@@ -1110,7 +1171,7 @@ export default function App() {
                         step="10"
                         value={led2.onMs}
                         onChange={(e) => handleSliderChange(2, 'onMs', parseInt(e.target.value) || 10)}
-                        className={`w-20 px-2 py-1 text-xs font-mono text-right rounded border tabular-nums ${
+                        className={`w-20 px-2 py-1.5 text-xs font-mono text-right rounded border tabular-nums ${
                           isDark ? 'bg-slate-800 border-slate-700 text-slate-100' : 'bg-slate-100 border-slate-300 text-slate-900'
                         }`}
                       />
@@ -1125,12 +1186,12 @@ export default function App() {
                     step="10"
                     value={led2.onMs}
                     onChange={(e) => handleSliderChange(2, 'onMs', parseInt(e.target.value))}
-                    className="w-full accent-amber-500 cursor-pointer"
+                    className="w-full accent-amber-500 cursor-pointer h-7"
                   />
                 </div>
 
                 {/* Slider: OFF Duration */}
-                <div className="flex flex-col gap-2">
+                <div className="flex flex-col gap-1.5 sm:gap-2">
                   <div className="flex items-center justify-between text-xs font-medium text-slate-400">
                     <label htmlFor="led2-off-slider">Pulse OFF Duration</label>
                     <div className="flex items-center gap-1">
@@ -1141,7 +1202,7 @@ export default function App() {
                         step="10"
                         value={led2.offMs}
                         onChange={(e) => handleSliderChange(2, 'offMs', parseInt(e.target.value) || 10)}
-                        className={`w-20 px-2 py-1 text-xs font-mono text-right rounded border tabular-nums ${
+                        className={`w-20 px-2 py-1.5 text-xs font-mono text-right rounded border tabular-nums ${
                           isDark ? 'bg-slate-800 border-slate-700 text-slate-100' : 'bg-slate-100 border-slate-300 text-slate-900'
                         }`}
                       />
@@ -1156,17 +1217,17 @@ export default function App() {
                     step="10"
                     value={led2.offMs}
                     onChange={(e) => handleSliderChange(2, 'offMs', parseInt(e.target.value))}
-                    className="w-full accent-amber-500 cursor-pointer"
+                    className="w-full accent-amber-500 cursor-pointer h-7"
                   />
                 </div>
 
                 {/* Calculated Frequency and Duty Cycle */}
-                <div className={`grid grid-cols-2 gap-3 p-3.5 rounded-xl border ${isDark ? 'bg-slate-800/50 border-slate-800' : 'bg-slate-100/70 border-slate-200'}`}>
+                <div className={`grid grid-cols-2 gap-2.5 sm:gap-3 p-3 sm:p-3.5 rounded-xl border ${isDark ? 'bg-slate-800/50 border-slate-800' : 'bg-slate-100/70 border-slate-200'}`}>
                   <div className="flex flex-col">
                     <span className="text-[10px] uppercase font-semibold text-slate-500">
                       Blinking Frequency
                     </span>
-                    <span className="text-base font-mono font-bold tabular-nums text-amber-400">
+                    <span className="text-sm sm:text-base font-mono font-bold tabular-nums text-amber-400">
                       {led2Freq} Hz
                     </span>
                   </div>
@@ -1174,7 +1235,7 @@ export default function App() {
                     <span className="text-[10px] uppercase font-semibold text-slate-500">
                       Duty Cycle
                     </span>
-                    <span className="text-base font-mono font-bold tabular-nums text-amber-400">
+                    <span className="text-sm sm:text-base font-mono font-bold tabular-nums text-amber-400">
                       {led2Duty} %
                     </span>
                   </div>
@@ -1185,25 +1246,25 @@ export default function App() {
                   <span className="text-slate-500 font-semibold">Presets:</span>
                   <button
                     onClick={() => handleSetLed(2, 'BLINK', 1000, 1000)}
-                    className="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors"
+                    className="px-3 py-2 sm:py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-200 transition-all min-h-[38px] flex items-center"
                   >
                     Slow (1s)
                   </button>
                   <button
                     onClick={() => handleSetLed(2, 'BLINK', 500, 500)}
-                    className="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors"
+                    className="px-3 py-2 sm:py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-200 transition-all min-h-[38px] flex items-center"
                   >
                     Normal (500ms)
                   </button>
                   <button
                     onClick={() => handleSetLed(2, 'BLINK', 100, 100)}
-                    className="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors"
+                    className="px-3 py-2 sm:py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-200 transition-all min-h-[38px] flex items-center"
                   >
                     Fast (100ms)
                   </button>
                   <button
                     onClick={() => handleSetLed(2, 'BLINK', 50, 450)}
-                    className="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors"
+                    className="px-3 py-2 sm:py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-200 transition-all min-h-[38px] flex items-center"
                   >
                     Strobe (50ms)
                   </button>
@@ -1214,45 +1275,45 @@ export default function App() {
             {/* Digital Waveform Oscilloscope */}
             <section
               aria-label="Digital Waveform Visualization"
-              className={`p-6 rounded-2xl border flex flex-col gap-4 ${
+              className={`p-4 sm:p-6 rounded-2xl border flex flex-col gap-3 sm:gap-4 ${
                 isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'
               }`}
             >
-              <div className="flex flex-wrap items-center justify-between gap-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div>
-                  <h3 className="text-base font-bold">Digital Logic Waveform (Oscilloscope)</h3>
+                  <h3 className="text-sm sm:text-base font-bold">Digital Logic Waveform (Oscilloscope)</h3>
                   <p className="text-xs text-slate-400">
                     Real-time digital square wave transitions (3.3V / 0V) across both GPIO channels
                   </p>
                 </div>
 
-                <div className="flex items-center gap-4 text-xs font-semibold">
+                <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-xs font-semibold">
                   <div className="flex items-center gap-1.5">
                     <span className="w-3.5 h-1 bg-cyan-400 rounded-sm" />
-                    <span>GPIO 13 (LED 1)</span>
+                    <span>GPIO 13</span>
                   </div>
                   <div className="flex items-center gap-1.5">
                     <span className="w-3.5 h-1 bg-amber-400 rounded-sm" />
-                    <span>GPIO 25 (LED 2)</span>
+                    <span>GPIO 25</span>
                   </div>
                   <button
                     onClick={() => setWaveformPaused(!waveformPaused)}
-                    className="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs flex items-center gap-1"
+                    className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-200 text-xs flex items-center gap-1 min-h-[36px]"
                   >
-                    {waveformPaused ? <Play className="w-3 h-3" /> : <Pause className="w-3 h-3" />}
+                    {waveformPaused ? <Play className="w-3.5 h-3.5" /> : <Pause className="w-3.5 h-3.5" />}
                     <span>{waveformPaused ? 'Resume' : 'Pause'}</span>
                   </button>
                   <button
                     onClick={() => (waveHistoryRef.current = [])}
-                    className="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs flex items-center gap-1"
+                    className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-200 text-xs flex items-center gap-1 min-h-[36px]"
                   >
-                    <RotateCcw className="w-3 h-3" />
+                    <RotateCcw className="w-3.5 h-3.5" />
                     <span>Clear</span>
                   </button>
                 </div>
               </div>
 
-              <div className="w-full h-48 rounded-xl border border-slate-800 overflow-hidden relative">
+              <div className="w-full h-40 sm:h-48 md:h-52 rounded-xl border border-slate-800 overflow-hidden relative">
                 <canvas ref={canvasRef} className="w-full h-full block" />
               </div>
             </section>
@@ -1260,18 +1321,18 @@ export default function App() {
             {/* Communication Console & Diagnostic Logs */}
             <section
               aria-label="Communication Console"
-              className={`p-6 rounded-2xl border flex flex-col gap-3 ${
+              className={`p-4 sm:p-6 rounded-2xl border flex flex-col gap-3 ${
                 isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'
               }`}
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <Terminal className="w-4 h-4 text-cyan-400" />
-                  <h3 className="text-sm font-bold">Live Communication & Security Log</h3>
+                  <h3 className="text-xs sm:text-sm font-bold">Live Communication & Security Log</h3>
                 </div>
                 <button
                   onClick={() => setLogs([])}
-                  className="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-xs text-slate-300"
+                  className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs text-slate-300 min-h-[36px]"
                 >
                   Clear Console
                 </button>
@@ -1279,7 +1340,7 @@ export default function App() {
 
               <div
                 ref={logsContainerRef}
-                className="h-36 overflow-y-auto font-mono text-xs p-3 rounded-lg bg-slate-950 border border-slate-800 flex flex-col gap-1"
+                className="h-36 overflow-y-auto overflow-x-auto font-mono text-[11px] sm:text-xs p-3 rounded-lg bg-slate-950 border border-slate-800 flex flex-col gap-1.5"
               >
                 {logs.length === 0 ? (
                   <span className="text-slate-600">Console ready. Event packets will stream here in real-time.</span>
@@ -1310,16 +1371,20 @@ export default function App() {
             TAB 2: HARDWARE WIRING & SCHEMATICS
         ===================================================================== */}
         {activeTab === 'wiring' && (
-          <div className="flex flex-col gap-6">
-            <div className={`p-6 rounded-2xl border ${isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
-              <h2 className="text-xl font-bold mb-2">ESP32-WROOM-32 + Purple Expansion Board Schematic</h2>
-              <p className="text-sm text-slate-400 mb-6">
+          <div className="flex flex-col gap-4 sm:gap-6">
+            <div className={`p-4 sm:p-6 rounded-2xl border ${isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
+              <h2 className="text-lg sm:text-xl font-bold mb-1.5">ESP32-WROOM-32 + Purple Expansion Board Schematic</h2>
+              <p className="text-xs sm:text-sm text-slate-400 mb-4">
                 Interactive connection diagram showing current-limiting resistors, GPIO signal pins, and common ground.
               </p>
 
-              {/* Interactive SVG Schematic */}
-              <div className="w-full overflow-x-auto p-4 bg-slate-950 rounded-xl border border-slate-800 flex justify-center">
-                <svg viewBox="0 0 880 440" className="w-full max-w-4xl h-auto">
+              <span className="text-[11px] text-cyan-400 block mb-2 sm:hidden font-mono">
+                ↔ Swipe horizontally to inspect circuit pins
+              </span>
+
+              {/* Interactive SVG Schematic with Mobile Horizontal Scroll */}
+              <div className="w-full overflow-x-auto p-2 sm:p-4 bg-slate-950 rounded-xl border border-slate-800 flex justify-start sm:justify-center">
+                <svg viewBox="0 0 880 440" className="w-full max-w-4xl h-auto min-w-[640px]">
                   {/* Expansion Board Base */}
                   <rect x="40" y="30" width="800" height="380" rx="16" fill="#2d124d" stroke="#582496" strokeWidth="3" />
                   <text x="440" y="60" fill="#d8b4fe" fontSize="14" fontWeight="bold" textAnchor="middle" fontFamily="sans-serif">
@@ -1393,16 +1458,16 @@ export default function App() {
               </div>
 
               {/* Component Specifications Table */}
-              <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
-                <div className="p-4 rounded-xl bg-slate-800/40 border border-slate-700/60">
+              <div className="mt-4 sm:mt-6 grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4 text-xs">
+                <div className="p-3.5 sm:p-4 rounded-xl bg-slate-800/40 border border-slate-700/60">
                   <h4 className="font-bold text-sm text-cyan-400 mb-1">LED 1 (GPIO 13)</h4>
                   <p className="text-slate-300">Signal indicator. Connects to GPIO 13 via a 220Ω resistor. Safe current: ~2.3mA.</p>
                 </div>
-                <div className="p-4 rounded-xl bg-slate-800/40 border border-slate-700/60">
+                <div className="p-3.5 sm:p-4 rounded-xl bg-slate-800/40 border border-slate-700/60">
                   <h4 className="font-bold text-sm text-amber-400 mb-1">LED 2 (GPIO 25)</h4>
                   <p className="text-slate-300">Status indicator. Connects to GPIO 25 via a 220Ω resistor. Safe current: ~6.0mA.</p>
                 </div>
-                <div className="p-4 rounded-xl bg-slate-800/40 border border-slate-700/60">
+                <div className="p-3.5 sm:p-4 rounded-xl bg-slate-800/40 border border-slate-700/60">
                   <h4 className="font-bold text-sm text-purple-400 mb-1">Purple Expansion Board</h4>
                   <p className="text-slate-300">Set the voltage selection jumper to 3.3V. LED cathodes return to the common GND rail.</p>
                 </div>
@@ -1415,12 +1480,12 @@ export default function App() {
             TAB 3: FIRMWARE GENERATOR
         ===================================================================== */}
         {activeTab === 'firmware' && (
-          <div className="flex flex-col gap-6">
-            <div className={`p-6 rounded-2xl border ${isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
-              <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
+          <div className="flex flex-col gap-4 sm:gap-6">
+            <div className={`p-4 sm:p-6 rounded-2xl border ${isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
                 <div>
-                  <h2 className="text-xl font-bold">Interactive ESP32 Firmware Generator</h2>
-                  <p className="text-sm text-slate-400">
+                  <h2 className="text-lg sm:text-xl font-bold">Interactive ESP32 Firmware Generator</h2>
+                  <p className="text-xs sm:text-sm text-slate-400">
                     Customize your Wi-Fi credentials and auth token, then copy or download <code className="text-cyan-400">esp32_controller.ino</code>.
                   </p>
                 </div>
@@ -1431,7 +1496,7 @@ export default function App() {
                       setCopiedCode(true);
                       setTimeout(() => setCopiedCode(false), 2000);
                     }}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white transition-colors"
+                    className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg bg-cyan-600 hover:bg-cyan-500 active:scale-95 text-white transition-all min-h-[38px]"
                   >
                     {copiedCode ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
                     <span>{copiedCode ? 'Copied!' : 'Copy Code'}</span>
@@ -1448,7 +1513,7 @@ export default function App() {
                       document.body.removeChild(a);
                       URL.revokeObjectURL(url);
                     }}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition-colors"
+                    className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-200 border border-slate-700 transition-all min-h-[38px]"
                   >
                     <Download className="w-3.5 h-3.5" />
                     <span>Download .ino</span>
@@ -1457,48 +1522,48 @@ export default function App() {
               </div>
 
               {/* Customizer Inputs */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 p-4 rounded-xl bg-slate-950 border border-slate-800 mb-6">
-                <div className="flex flex-col gap-1.5">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 p-3.5 sm:p-4 rounded-xl bg-slate-950 border border-slate-800 mb-4 sm:mb-6">
+                <div className="flex flex-col gap-1">
                   <label className="text-xs font-semibold text-slate-400">Wi-Fi SSID</label>
                   <input
                     type="text"
                     value={fwWifiSsid}
                     onChange={(e) => setFwWifiSsid(e.target.value)}
-                    className="px-3 py-1.5 text-xs font-mono rounded bg-slate-900 border border-slate-700 text-slate-100 focus:outline-none focus:border-cyan-500"
+                    className="px-3 py-2 text-xs font-mono rounded-lg bg-slate-900 border border-slate-700 text-slate-100 focus:outline-none focus:border-cyan-500 min-h-[40px]"
                   />
                 </div>
-                <div className="flex flex-col gap-1.5">
+                <div className="flex flex-col gap-1">
                   <label className="text-xs font-semibold text-slate-400">Wi-Fi Password</label>
                   <input
                     type="password"
                     value={fwWifiPass}
                     onChange={(e) => setFwWifiPass(e.target.value)}
-                    className="px-3 py-1.5 text-xs font-mono rounded bg-slate-900 border border-slate-700 text-slate-100 focus:outline-none focus:border-cyan-500"
+                    className="px-3 py-2 text-xs font-mono rounded-lg bg-slate-900 border border-slate-700 text-slate-100 focus:outline-none focus:border-cyan-500 min-h-[40px]"
                   />
                 </div>
-                <div className="flex flex-col gap-1.5">
+                <div className="flex flex-col gap-1">
                   <label className="text-xs font-semibold text-slate-400">Device ID</label>
                   <input
                     type="text"
                     value={config.deviceId}
                     onChange={(e) => setConfig({ ...config, deviceId: e.target.value })}
-                    className="px-3 py-1.5 text-xs font-mono rounded bg-slate-900 border border-slate-700 text-slate-100 focus:outline-none focus:border-cyan-500"
+                    className="px-3 py-2 text-xs font-mono rounded-lg bg-slate-900 border border-slate-700 text-slate-100 focus:outline-none focus:border-cyan-500 min-h-[40px]"
                   />
                 </div>
-                <div className="flex flex-col gap-1.5">
+                <div className="flex flex-col gap-1">
                   <label className="text-xs font-semibold text-slate-400">Auth Token</label>
                   <input
                     type="text"
                     value={config.authToken}
                     onChange={(e) => setConfig({ ...config, authToken: e.target.value })}
-                    className="px-3 py-1.5 text-xs font-mono rounded bg-slate-900 border border-slate-700 text-slate-100 focus:outline-none focus:border-cyan-500"
+                    className="px-3 py-2 text-xs font-mono rounded-lg bg-slate-900 border border-slate-700 text-slate-100 focus:outline-none focus:border-cyan-500 min-h-[40px]"
                   />
                 </div>
               </div>
 
               {/* Code Viewer */}
               <div className="relative">
-                <pre className="max-h-[500px] overflow-y-auto p-4 rounded-xl bg-slate-950 border border-slate-800 font-mono text-xs text-slate-300 leading-relaxed">
+                <pre className="max-h-[450px] overflow-y-auto overflow-x-auto p-3.5 sm:p-4 rounded-xl bg-slate-950 border border-slate-800 font-mono text-[11px] sm:text-xs text-slate-300 leading-relaxed">
                   <code>{liveFirmwareCode}</code>
                 </pre>
               </div>
@@ -1510,16 +1575,16 @@ export default function App() {
             TAB 4: DOCUMENTATION VIEWER
         ===================================================================== */}
         {activeTab === 'docs' && (
-          <div className="flex flex-col gap-6">
-            <div className={`p-6 rounded-2xl border ${isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
-              <div className="flex items-center gap-3 border-b pb-4 border-slate-800 mb-6">
+          <div className="flex flex-col gap-4 sm:gap-6">
+            <div className={`p-4 sm:p-6 rounded-2xl border ${isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
+              <div className="flex items-center gap-2 border-b pb-3 border-slate-800 mb-4 sm:mb-6 overflow-x-auto">
                 {(['setup', 'wiring', 'api', 'readme'] as const).map((sub) => (
                   <button
                     key={sub}
                     onClick={() => setActiveDocSubtab(sub)}
-                    className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors capitalize ${
+                    className={`whitespace-nowrap px-3.5 py-2 text-xs font-semibold rounded-lg transition-all min-h-[38px] capitalize ${
                       activeDocSubtab === sub
-                        ? 'bg-cyan-600 text-white'
+                        ? 'bg-cyan-600 text-white shadow-sm'
                         : 'bg-slate-800 text-slate-400 hover:text-slate-200'
                     }`}
                   >
@@ -1528,7 +1593,7 @@ export default function App() {
                 ))}
               </div>
 
-              <div className="prose prose-invert max-w-none text-slate-300 text-sm leading-relaxed whitespace-pre-wrap font-sans">
+              <div className="prose prose-invert max-w-none text-slate-300 text-xs sm:text-sm leading-relaxed whitespace-pre-wrap font-sans break-words overflow-x-auto">
                 {activeDocSubtab === 'setup' && SETUP_DOC}
                 {activeDocSubtab === 'wiring' && WIRING_DOC}
                 {activeDocSubtab === 'api' && API_DOC}

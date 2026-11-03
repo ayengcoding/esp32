@@ -262,6 +262,15 @@ void setupWiFi() {
   }
 }
 
+// Compatibility helper for ArduinoJson 6 and 7
+#if ARDUINOJSON_VERSION_MAJOR >= 7
+  #define JSON_DOC(name, size) JsonDocument name
+  #define HAS_KEY(doc, key) (!doc[key].isNull())
+#else
+  #define JSON_DOC(name, size) StaticJsonDocument<size> name
+  #define HAS_KEY(doc, key) (doc.containsKey(key))
+#endif
+
 void reconnectMQTT() {
   static unsigned long lastMqttAttempt = 0;
   if (millis() - lastMqttAttempt < 5000) {
@@ -275,8 +284,7 @@ void reconnectMQTT() {
   String clientId = String("ESP32-") + DEVICE_ID + "-" + String(random(0xffff), HEX);
 
   // Define Last Will & Testament (LWT) topic and payload
-  // Retained so the web dashboard immediately knows when ESP32 drops offline
-  StaticJsonDocument<128> lwtDoc;
+  JSON_DOC(lwtDoc, 128);
   lwtDoc["deviceId"] = DEVICE_ID;
   lwtDoc["online"] = false;
   lwtDoc["reason"] = "lwt_offline";
@@ -331,7 +339,7 @@ void checkSerialCommands() {
 }
 
 void handleCommandJson(const String& jsonStr, const char* source) {
-  StaticJsonDocument<512> doc;
+  JSON_DOC(doc, 512);
   DeserializationError err = deserializeJson(doc, jsonStr);
 
   if (err) {
@@ -340,7 +348,7 @@ void handleCommandJson(const String& jsonStr, const char* source) {
   }
 
   // 1. Verify Target Device ID (if specified)
-  if (doc.containsKey("deviceId")) {
+  if (HAS_KEY(doc, "deviceId")) {
     const char* targetId = doc["deviceId"];
     if (strcmp(targetId, DEVICE_ID) != 0) {
       // Message intended for another device on shared broker; ignore quietly
@@ -355,7 +363,7 @@ void handleCommandJson(const String& jsonStr, const char* source) {
     Serial.printf("[%s] SECURITY WARNING: Unauthorized command attempt! (Total: %lu)\n", source, unauthorizedAttempts);
     
     // Broadcast security event back to telemetry so dashboard can show warning
-    StaticJsonDocument<256> alertDoc;
+    JSON_DOC(alertDoc, 256);
     alertDoc["deviceId"] = DEVICE_ID;
     alertDoc["event"] = "auth_failed";
     alertDoc["unauthorizedCount"] = unauthorizedAttempts;
@@ -396,7 +404,7 @@ void handleCommandJson(const String& jsonStr, const char* source) {
   }
   else if (strcmp(cmd, "PING") == 0) {
     // Latency round-trip pong
-    StaticJsonDocument<128> pongDoc;
+    JSON_DOC(pongDoc, 128);
     pongDoc["deviceId"] = DEVICE_ID;
     pongDoc["type"] = "PONG";
     pongDoc["nonce"] = doc["nonce"] | 0;
@@ -418,7 +426,7 @@ void handleCommandJson(const String& jsonStr, const char* source) {
 // TELEMETRY & STATUS PUBLISHING
 // =============================================================================
 void publishStatus(bool isOnline, const char* note) {
-  StaticJsonDocument<256> doc;
+  JSON_DOC(doc, 256);
   doc["deviceId"] = DEVICE_ID;
   doc["online"] = isOnline;
   doc["ip"] = WiFi.isConnected() ? WiFi.localIP().toString() : "Not Connected";
@@ -436,7 +444,7 @@ void publishStatus(bool isOnline, const char* note) {
 }
 
 void publishTelemetry() {
-  StaticJsonDocument<512> doc;
+  JSON_DOC(doc, 512);
   doc["deviceId"] = DEVICE_ID;
   doc["online"] = true;
   doc["ip"] = WiFi.isConnected() ? WiFi.localIP().toString() : "0.0.0.0";
@@ -446,21 +454,19 @@ void publishTelemetry() {
   doc["uptimeSec"] = millis() / 1000;
   doc["unauthorizedAttempts"] = unauthorizedAttempts;
 
-  // LED 1 State
-  JsonObject l1 = doc.createNestedObject("led1");
-  l1["pin"] = PIN_LED1;
-  l1["mode"] = (led1.mode == MODE_ON) ? "ON" : (led1.mode == MODE_BLINK) ? "BLINK" : "OFF";
-  l1["state"] = digitalRead(PIN_LED1) == HIGH ? 1 : 0;
-  l1["onMs"] = led1.onDurationMs;
-  l1["offMs"] = led1.offDurationMs;
+  // LED 1 State (Compatible with both ArduinoJson 6 and 7)
+  doc["led1"]["pin"] = PIN_LED1;
+  doc["led1"]["mode"] = (led1.mode == MODE_ON) ? "ON" : (led1.mode == MODE_BLINK) ? "BLINK" : "OFF";
+  doc["led1"]["state"] = digitalRead(PIN_LED1) == HIGH ? 1 : 0;
+  doc["led1"]["onMs"] = led1.onDurationMs;
+  doc["led1"]["offMs"] = led1.offDurationMs;
 
-  // LED 2 State
-  JsonObject l2 = doc.createNestedObject("led2");
-  l2["pin"] = PIN_LED2;
-  l2["mode"] = (led2.mode == MODE_ON) ? "ON" : (led2.mode == MODE_BLINK) ? "BLINK" : "OFF";
-  l2["state"] = digitalRead(PIN_LED2) == HIGH ? 1 : 0;
-  l2["onMs"] = led2.onDurationMs;
-  l2["offMs"] = led2.offDurationMs;
+  // LED 2 State (Compatible with both ArduinoJson 6 and 7)
+  doc["led2"]["pin"] = PIN_LED2;
+  doc["led2"]["mode"] = (led2.mode == MODE_ON) ? "ON" : (led2.mode == MODE_BLINK) ? "BLINK" : "OFF";
+  doc["led2"]["state"] = digitalRead(PIN_LED2) == HIGH ? 1 : 0;
+  doc["led2"]["onMs"] = led2.onDurationMs;
+  doc["led2"]["offMs"] = led2.offDurationMs;
 
   String output;
   serializeJson(doc, output);
